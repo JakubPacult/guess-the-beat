@@ -42,11 +42,13 @@ class MainActivity : ComponentActivity() {
 fun GameScreen(musicPlayer: MusicPlayer) {
     val coroutineScope = rememberCoroutineScope()
 
+    var playlistTrackIds by remember { mutableStateOf<List<Int>>(emptyList()) }
     var correctTitle by remember { mutableStateOf("") }
-    var userGuess by remember {mutableStateOf("") }
-    var message by remember {mutableStateOf("") }
+    var correctArtist by remember { mutableStateOf("") }
+    var userGuess by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
     var isSongLoaded by remember { mutableStateOf(false) }
-    var artist by remember { mutableStateOf("") }
+    var score by remember { mutableStateOf(0) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -55,34 +57,51 @@ fun GameScreen(musicPlayer: MusicPlayer) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
+        // Przycisk startowy / ładowania playlisty
         Button(onClick = {
             coroutineScope.launch {
-                message = ""
+                message = "Pobieranie playlisty..."
                 userGuess = ""
-                // Pobieramy utwór i przypisujemy zwrócony tytuł do zmiennej
-                val result = musicPlayer.loadAndPlaySong(89077555)
-                if (result != null) {
-                    correctTitle = result.first
-                    artist = result.second
-                    isSongLoaded = true
-                    message = "Utwór odtworzony! Zgadnij tytuł."
+
+                // Id playlisty z Deezer
+                val ids = musicPlayer.loadPlaylist(8424792262)
+
+                if (ids.isNotEmpty()) {
+                    playlistTrackIds = ids
+                    // Losowanie id
+                    val randomId = playlistTrackIds.random()
+                    val result = musicPlayer.loadAndPlaySong(randomId)
+
+                    if (result != null) {
+                        correctTitle = result.first
+                        correctArtist = result.second
+                        isSongLoaded = true
+                        message = "Playlista wczytana! Zgadnij utwór."
+                    } else {
+                        message = "Błąd odtwarzania utworu."
+                    }
                 } else {
-                    message = "Błąd pobierania utworu."
+                    message = "Nie udało się pobrać playlisty."
                 }
             }
         }) {
-            Text(text = "Odtwórz losową piosenkę")
+            Text(text = "Rozpocznij / Wczytaj playlistę")
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (isSongLoaded) {
+            Text(text = "Punkty: $score", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(text = "Wykonawca: $correctArtist", style = MaterialTheme.typography.bodyLarge)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = userGuess,
                 onValueChange = { userGuess = it },
@@ -93,9 +112,20 @@ fun GameScreen(musicPlayer: MusicPlayer) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(onClick = {
-                // ignorowanie wielkości liter
                 if (userGuess.trim().equals(correctTitle.trim(), ignoreCase = true)) {
-                    message = "Brawo! Poprawna odpowiedź: $correctTitle - $artist"
+                    score += 1
+                    message = "Brawo! Poprawna odpowiedź: $correctTitle - $correctArtist. Losuję kolejny utwór..."
+
+                    // Losowanie kolejnego utworu z playlisty
+                    coroutineScope.launch {
+                        userGuess = ""
+                        val randomId = playlistTrackIds.random()
+                        val result = musicPlayer.loadAndPlaySong(randomId)
+                        if (result != null) {
+                            correctTitle = result.first
+                            correctArtist = result.second
+                        }
+                    }
                 } else {
                     message = "Błędnie! Spróbuj ponownie."
                 }
@@ -106,10 +136,9 @@ fun GameScreen(musicPlayer: MusicPlayer) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // komunikat na dole
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

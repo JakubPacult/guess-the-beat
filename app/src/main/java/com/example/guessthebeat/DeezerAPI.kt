@@ -10,6 +10,30 @@ import java.net.URL
 class MusicPlayer {
     private var mediaPlayer: MediaPlayer? = null
 
+    suspend fun loadPlaylist(playlistId: Long): List<Int> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val jsonString = URL("https://api.deezer.com/playlist/$playlistId").readText()
+                val jsonObject = JSONObject(jsonString)
+
+                // wyłuskanie nazwy piosenki z obiektu "tracks"
+                val tracksData = jsonObject.getJSONObject("tracks").getJSONArray("data")
+                val trackIds = mutableListOf<Int>()
+
+                for (i in 0 until tracksData.length()) {
+                    val trackObj = tracksData.getJSONObject(i)
+                    val id = trackObj.getInt("id")
+                    trackIds.add(id)
+                }
+
+                trackIds // Zwracamy listę ID utworów
+            } catch (e: Exception) {
+                Log.e("MusicPlayer", "Błąd pobierania playlisty: ${e.message}")
+                emptyList()
+            }
+        }
+    }
+
     // Funkcja do pobierania i odtwarzania utworu
     suspend fun loadAndPlaySong(trackId: Int): Pair<String, String>? {
         return try {
