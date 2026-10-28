@@ -94,7 +94,7 @@ class GameViewModel : ViewModel() {
     }
 
     fun checkAnswer(musicPlayer: MusicPlayer) {
-        // Blokujemy sprawdzanie, jeśli runda już minęła lub nie ma prób
+        // blokujemy sprawdzanie, jesli runda już minęła lub nie ma prob
         if (isRoundOver || attemptsLeft <= 0) return
 
         val currentGuess = userGuess.trim()
@@ -104,7 +104,7 @@ class GameViewModel : ViewModel() {
             // sukces!
             score += 1
             isAnswerCorrect = true
-            isRoundOver = true // 💡 Zamykamy rundę
+            isRoundOver = true // zamykamy rundę
             isPlaying = false
             musicPlayer.pause()
             message = "🎉 Brawo! Poprawna odpowiedź. Kliknij, aby przejść dalej."
@@ -127,7 +127,7 @@ class GameViewModel : ViewModel() {
             } else {
                 // wykorzystano 6 prób – kończymy rundę (przegrana)
                 isAnswerCorrect = false
-                isRoundOver = true // 💡 Zamykamy rundę, żeby pokazać przycisk następnej piosenki
+                isRoundOver = true // zamykamy rundę, żeby pokazać przycisk następnej piosenki
                 isPlaying = false
                 musicPlayer.pause()
                 message = "Koniec prób! Prawidłowy tytuł to: $correctTitle - $correctArtist. Spróbuj kolejnej piosenki."
@@ -136,7 +136,7 @@ class GameViewModel : ViewModel() {
     }
 
     fun togglePlayPause(musicPlayer: MusicPlayer) {
-        if (isRoundOver) return // Blokujemy sterowanie, gdy runda się skończyła
+        if (isRoundOver) return // blokujemy sterowanie, gdy runda się skończyła
 
         when {
             isFinished -> {
