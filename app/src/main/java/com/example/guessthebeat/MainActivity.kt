@@ -3,18 +3,25 @@ package com.example.guessthebeat
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.guessthebeat.ui.theme.GuessTheBeatTheme
 
@@ -25,9 +32,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GuessTheBeatTheme {
+                // Nowoczesne tło z pionowym gradientem
+                val backgroundGradient = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        Color(0xFF1F1B24) // Lekko fioletowy odcień na dole
+                    )
+                )
+
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(backgroundGradient),
+                    color = Color.Transparent // Surface musi być przezroczyste, by było widać gradient Boxa
                 ) {
                     GameScreen(musicPlayer = musicPlayer)
                 }
@@ -47,104 +64,188 @@ fun GameScreen(
     viewModel: GameViewModel = viewModel()
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "GuessTheBeat", style = MaterialTheme.typography.displayMedium)
+        // Tytuł gry
+        Text(
+            text = "GuessTheBeat",
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Button(onClick = {
-            viewModel.loadPlaylistAndPlay(musicPlayer)
-        }) {
-            Text(text = "Rozpocznij / Wczytaj playlistę")
+        if (!viewModel.isSongLoaded) {
+            Button(
+                onClick = { viewModel.loadPlaylistAndPlay(musicPlayer) },
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text(text = "Rozpocznij Grę", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         if (viewModel.isSongLoaded) {
-            Text(text = "Punkty: ${viewModel.score}", style = MaterialTheme.typography.titleMedium)
+            // Karta z wynikami i informacjami
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Punkty: ${viewModel.score}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(
+                            text = "Próby: ${viewModel.attemptsLeft}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = if (viewModel.attemptsLeft <= 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Wykonawca: ${viewModel.correctArtist}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Text(text = "Wykonawca: ${viewModel.correctArtist}", style = MaterialTheme.typography.bodyLarge)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 💡 Jeśli runda trzyma się dalej (nie odgadnięto i nie minęły próby)
             if (!viewModel.isRoundOver) {
+                // Duży, okrągły przycisk odtwarzania
                 Button(
-                    onClick = {
-                        viewModel.togglePlayPause(musicPlayer)
-                    },
-                    modifier = Modifier.size(120.dp),
-                    shape = CircleShape
+                    onClick = { viewModel.togglePlayPause(musicPlayer) },
+                    modifier = Modifier.size(100.dp),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     val icon = when {
                         viewModel.isFinished -> Icons.Default.Refresh
                         viewModel.isPlaying -> Icons.Default.Pause
                         else -> Icons.Default.PlayArrow
                     }
-
                     Icon(
                         imageVector = icon,
-                        contentDescription = "Sterowanie odtwarzaniem",
-                        modifier = Modifier.size(60.dp)
+                        contentDescription = "Sterowanie",
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
+                // Pole tekstowe
                 OutlinedTextField(
                     value = viewModel.userGuess,
                     onValueChange = { viewModel.updateGuess(it) },
                     label = { Text("Wpisz tytuł piosenki") },
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        cursorColor = MaterialTheme.colorScheme.secondary
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(onClick = {
-                    viewModel.checkAnswer(musicPlayer)
-                }) {
-                    Text(text = "Sprawdź odpowiedź")
-                }
-
-            } else {
-                // 💡 JEŚLI RUNDA SIĘ SKOŃCZYŁA: Pokazujemy przycisk "Następna piosenka"
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = {
-                        viewModel.playRandomSong(musicPlayer)
-                    },
-                    modifier = Modifier.fillMaxWidth(0.7f).height(50.dp)
+                    onClick = { viewModel.checkAnswer(musicPlayer) },
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    Text(text = "Następna piosenka", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Sprawdź odpowiedź", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                }
+
+            } else {
+                // Koniec rundy - Przycisk nowej piosenki
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { viewModel.playRandomSong(musicPlayer) },
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text(text = "Następna piosenka", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Sekcja z wiadomością dla użytkownika (kolorowa w zależności od wyniku)
+            if (viewModel.message.isNotEmpty()) {
+                val messageColor = when {
+                    viewModel.message.contains("Brawo") -> Color(0xFF00E676)
+                    viewModel.message.contains("Błędnie") || viewModel.message.contains("Koniec prób") -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurface
+                }
+
+                Text(
+                    text = viewModel.message,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = messageColor,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
 
             // Wyświetlanie błędnych prób
             if (viewModel.incorrectGuesses.isNotEmpty()) {
-                Text(text = "Twoje błędne próby:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.error)
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Błędne strzały:",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    viewModel.incorrectGuesses.forEach { guess ->
-                        Text(text = "❌ $guess", style = MaterialTheme.typography.bodySmall)
+                // Wyświetlanie jako małe tagi (chips)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    viewModel.incorrectGuesses.takeLast(3).forEach { guess ->
+                        Box(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(text = guess, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = viewModel.message,
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
