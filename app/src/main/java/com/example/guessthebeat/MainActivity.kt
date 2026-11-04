@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,11 +33,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GuessTheBeatTheme {
-                // Nowoczesne tło z pionowym gradientem
                 val backgroundGradient = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.background,
-                        Color(0xFF1F1B24) // Lekko fioletowy odcień na dole
+                        Color(0xFF1F1B24)
                     )
                 )
 
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(backgroundGradient),
-                    color = Color.Transparent // Surface musi być przezroczyste, by było widać gradient Boxa
+                    color = Color.Transparent
                 ) {
                     GameScreen(musicPlayer = musicPlayer)
                 }
@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        // Zatrzymanie muzyki i zwolnienie zasobów przez metodę z klasy MusicPlayer
         musicPlayer.stop()
     }
 }
@@ -81,169 +82,215 @@ fun GameScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (!viewModel.isSongLoaded) {
-            Button(
-                onClick = { viewModel.loadPlaylistAndPlay(musicPlayer) },
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text(text = "Rozpocznij Grę", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+        // KROK 1: Wybór playlisty, jeśli użytkownik jeszcze jej nie wybrał
+        if (viewModel.selectedPlaylist == null) {
+            Text(
+                text = "Wybierz playlistę:",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-        if (viewModel.isSongLoaded) {
-            // Karta z wynikami i informacjami
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                Column(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Generowanie kart dla każdej dostępnej playlisty
+            viewModel.availablePlaylists.forEach { playlist ->
+                Card(
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .clickable { viewModel.selectPlaylist(playlist) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(text = "Punkty: ${viewModel.score}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(
-                            text = "Próby: ${viewModel.attemptsLeft}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = if (viewModel.attemptsLeft <= 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = playlist.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = playlist.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Wykonawca: ${viewModel.correctArtist}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (!viewModel.isRoundOver) {
-                // Duży, okrągły przycisk odtwarzania
-                Button(
-                    onClick = { viewModel.togglePlayPause(musicPlayer) },
-                    modifier = Modifier.size(100.dp),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    val icon = when {
-                        viewModel.isFinished -> Icons.Default.Refresh
-                        viewModel.isPlaying -> Icons.Default.Pause
-                        else -> Icons.Default.PlayArrow
-                    }
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = "Sterowanie",
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Pole tekstowe
-                OutlinedTextField(
-                    value = viewModel.userGuess,
-                    onValueChange = { viewModel.updateGuess(it) },
-                    label = { Text("Wpisz tytuł piosenki") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        cursorColor = MaterialTheme.colorScheme.secondary
-                    )
+        } else {
+            // KROK 2: Playlista została wybrana, ale gra się jeszcze nie rozpoczęła (utwór nie wczytany)
+            if (!viewModel.isSongLoaded) {
+                Text(
+                    text = "Wybrano: ${viewModel.selectedPlaylist?.name}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.secondary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { viewModel.checkAnswer(musicPlayer) },
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text(text = "Sprawdź odpowiedź", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                }
-
-            } else {
-                // Koniec rundy - Przycisk nowej piosenki
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { viewModel.playRandomSong(musicPlayer) },
+                    onClick = { viewModel.loadPlaylistAndPlay(musicPlayer) },
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text(text = "Następna piosenka", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Sekcja z wiadomością dla użytkownika (kolorowa w zależności od wyniku)
-            if (viewModel.message.isNotEmpty()) {
-                val messageColor = when {
-                    viewModel.message.contains("Brawo") -> Color(0xFF00E676)
-                    viewModel.message.contains("Błędnie") || viewModel.message.contains("Koniec prób") -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.onSurface
+                    Text(text = "Rozpocznij Grę", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
 
-                Text(
-                    text = viewModel.message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = messageColor,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-
-            // Wyświetlanie błędnych prób
-            if (viewModel.incorrectGuesses.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Błędne strzały:",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.error
-                )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Wyświetlanie jako małe tagi (chips)
-                Row(
+                TextButton(onClick = { viewModel.resetPlaylistSelection() }) {
+                    Text(text = "Zmień playlistę", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                // KROK 3: Właściwa rozgrywka
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
-                    viewModel.incorrectGuesses.takeLast(3).forEach { guess ->
-                        Box(
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = guess, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                            Text(text = "Punkty: ${viewModel.score}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text(
+                                text = "Próby: ${viewModel.attemptsLeft}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = if (viewModel.attemptsLeft <= 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Wykonawca: ${viewModel.correctArtist}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                if (!viewModel.isRoundOver) {
+                    Button(
+                        onClick = { viewModel.togglePlayPause(musicPlayer) },
+                        modifier = Modifier.size(100.dp),
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(0.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        val icon = when {
+                            viewModel.isFinished -> Icons.Default.Refresh
+                            viewModel.isPlaying -> Icons.Default.Pause
+                            else -> Icons.Default.PlayArrow
+                        }
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = "Sterowanie",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    OutlinedTextField(
+                        value = viewModel.userGuess,
+                        onValueChange = { viewModel.updateGuess(it) },
+                        label = { Text("Wpisz tytuł piosenki") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                            cursorColor = MaterialTheme.colorScheme.secondary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = { viewModel.checkAnswer(musicPlayer) },
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text(text = "Sprawdź odpowiedź", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                    }
+
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { viewModel.playRandomSong(musicPlayer) },
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text(text = "Następna piosenka", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (viewModel.message.isNotEmpty()) {
+                    val messageColor = when {
+                        viewModel.message.contains("Brawo") -> Color(0xFF00E676)
+                        viewModel.message.contains("Błędnie") || viewModel.message.contains("Koniec prób") -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+
+                    Text(
+                        text = viewModel.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = messageColor,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+
+                if (viewModel.incorrectGuesses.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Błędne strzały:",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        viewModel.incorrectGuesses.takeLast(3).forEach { guess ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(text = guess, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
+                }
+
+                // Dodatkowy przycisk pozwalający zmienić playlistę w trakcie powrotu do menu
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = {
+                    musicPlayer.stop()
+                    viewModel.resetPlaylistSelection()
+                }) {
+                    Text(text = "← Wybierz inną playlistę", color = MaterialTheme.colorScheme.secondary)
                 }
             }
         }

@@ -8,6 +8,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
+// Model reprezentujący playlistę
+data class DeezerPlaylist(
+    val id: Long,
+    val name: String,
+    val description: String
+)
+
 class GameViewModel : ViewModel() {
     var score by mutableStateOf(0)
         private set
@@ -33,6 +40,16 @@ class GameViewModel : ViewModel() {
     var isRoundOver by mutableStateOf(false)
         private set
 
+    // --- Obsługa wielu playlist ---
+    val availablePlaylists = listOf(
+        DeezerPlaylist(5123717724, "Hity lat 2000+", "Największe przeboje XXI wieku"),
+        DeezerPlaylist(3227703762, "Rock Classics", "Ponadczasowe hymny rockowe"),
+        DeezerPlaylist(1115594221, "Pop Top", "Świeże hity popowe") // Przykładowe ID, możesz podmienić na własne
+    )
+
+    var selectedPlaylist by mutableStateOf<DeezerPlaylist?>(null)
+        private set
+
     private var playlistTrackIds = listOf<Int>()
     private var correctTitle = ""
 
@@ -40,9 +57,22 @@ class GameViewModel : ViewModel() {
         userGuess = newGuess
     }
 
+    // Wybór playlisty przez użytkownika
+    fun selectPlaylist(playlist: DeezerPlaylist) {
+        selectedPlaylist = playlist
+    }
+
+    // Reset wyboru, aby powrócić do menu playlist
+    fun resetPlaylistSelection() {
+        selectedPlaylist = null
+        isSongLoaded = false
+    }
+
     fun loadPlaylistAndPlay(musicPlayer: MusicPlayer) {
+        val playlist = selectedPlaylist ?: return
+
         viewModelScope.launch {
-            message = "Pobieranie playlisty..."
+            message = "Pobieranie playlisty: ${playlist.name}..."
             userGuess = ""
             score = 0
             attemptsLeft = 6
@@ -50,7 +80,8 @@ class GameViewModel : ViewModel() {
             isRoundOver = false
             incorrectGuesses.clear()
 
-            val ids = musicPlayer.loadPlaylist(5123717724) //  3227703762
+            // Pobieramy ID utworów dla wybranej playlisty
+            val ids = musicPlayer.loadPlaylist(playlist.id)
 
             if (ids.isNotEmpty()) {
                 playlistTrackIds = ids
@@ -94,49 +125,40 @@ class GameViewModel : ViewModel() {
     }
 
     fun checkAnswer(musicPlayer: MusicPlayer) {
-        // blokujemy sprawdzanie, jesli runda już minęła lub nie ma prob
         if (isRoundOver || attemptsLeft <= 0) return
 
         val currentGuess = userGuess.trim()
         if (currentGuess.isEmpty()) return
 
         if (currentGuess.equals(correctTitle.trim(), ignoreCase = true)) {
-            // sukces!
             score += 1
             isAnswerCorrect = true
-            isRoundOver = true // zamykamy rundę
+            isRoundOver = true
             isPlaying = false
             musicPlayer.pause()
             message = "🎉 Brawo! Poprawna odpowiedź. Kliknij, aby przejść dalej."
         } else {
-            // zła odpowiedź – zmniejszamy liczbę prób
             attemptsLeft -= 1
-
-            // dodanie błędnych prób
             incorrectGuesses.add(currentGuess)
-            // maks 5 napisow pod spodem
             if (incorrectGuesses.size > 5) {
                 incorrectGuesses.removeAt(0)
             }
-
-            // czyscimy pole do wpisywania
             userGuess = ""
 
             if (attemptsLeft > 0) {
                 message = "❌ Błędnie! Pozostało prób: $attemptsLeft"
             } else {
-                // wykorzystano 6 prób – kończymy rundę (przegrana)
                 isAnswerCorrect = false
-                isRoundOver = true // zamykamy rundę, żeby pokazać przycisk następnej piosenki
+                isRoundOver = true
                 isPlaying = false
                 musicPlayer.pause()
-                message = "Koniec prób! Prawidłowy tytuł to: $correctTitle - $correctArtist. Spróbuj kolejnej piosenki."
+                message = "Koniec prób! Prawidłowy tytuł to: $correctTitle\n$correctArtist. Spróbuj kolejnej piosenki."
             }
         }
     }
 
     fun togglePlayPause(musicPlayer: MusicPlayer) {
-        if (isRoundOver) return // blokujemy sterowanie, gdy runda się skończyła
+        if (isRoundOver) return
 
         when {
             isFinished -> {
