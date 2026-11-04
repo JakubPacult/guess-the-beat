@@ -43,8 +43,8 @@ class GameViewModel : ViewModel() {
     // --- Obsługa wielu playlist ---
     val availablePlaylists = listOf(
         DeezerPlaylist(5123717724, "Hity lat 2000+", "Największe przeboje XXI wieku"),
-        DeezerPlaylist(3227703762, "Rock Classics", "Ponadczasowe hymny rockowe"),
-        DeezerPlaylist(1115594221, "Pop Top", "Świeże hity popowe") // Przykładowe ID, możesz podmienić na własne
+        DeezerPlaylist(1578812305, "Rock Classics", "Ponadczasowe hymny rockowe"), // 1578812305
+        DeezerPlaylist(3227703762, "Pop Top", "Świeże hity popowe")
     )
 
     var selectedPlaylist by mutableStateOf<DeezerPlaylist?>(null)
@@ -119,7 +119,8 @@ class GameViewModel : ViewModel() {
                 isFinished = false
                 message = "Zgadnij tytuł utworu! Pozostało prób: $attemptsLeft"
             } else {
-                message = "Błąd odtwarzania utworu."
+                message = "Pominięto uszkodzony utwór, losuję kolejny..."
+                playRandomSong(musicPlayer)
             }
         }
     }
