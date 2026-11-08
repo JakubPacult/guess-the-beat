@@ -256,12 +256,7 @@ fun GameScreen(
                                 fontSize = 18.sp,
                                 color = if (viewModel.attemptsLeft <= 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Wykonawca: ${viewModel.correctArtist}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
+                            
                         }
                     }
 
