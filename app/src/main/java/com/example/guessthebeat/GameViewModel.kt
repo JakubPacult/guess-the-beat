@@ -20,6 +20,11 @@ class GameViewModel : ViewModel() {
         private set
     var message by mutableStateOf("")
         private set
+    var currentRound by mutableStateOf(1)
+        private set
+    val totalRounds = 5 // Gra kończy się po 5 piosenkach
+    var isGameSessionFinished by mutableStateOf(false)
+        private set
     var userGuess by mutableStateOf("")
         private set
     var isSongLoaded by mutableStateOf(false)
@@ -110,6 +115,8 @@ class GameViewModel : ViewModel() {
             message = "Pobieranie playlisty: ${playlist.name}..."
             userGuess = ""
             score = 0
+            currentRound = 1 // Reset rund
+            isGameSessionFinished = false // Reset stanu końca
             attemptsLeft = 6
             isAnswerCorrect = false
             isRoundOver = false
@@ -126,6 +133,15 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun nextRound(musicPlayer: MusicPlayer) {
+        if (currentRound >= totalRounds) {
+            isGameSessionFinished = true
+            musicPlayer.stop()
+        } else {
+            currentRound++
+            playRandomSong(musicPlayer)
+        }
+    }
     fun playRandomSong(musicPlayer: MusicPlayer) {
         if (playlistTrackIds.isEmpty()) {
             message = "Brak utworów z dostępnym audio na tej playliście."

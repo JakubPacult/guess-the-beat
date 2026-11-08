@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,10 +38,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GuessTheBeatTheme {
+                val isDark = isSystemInDarkTheme()
+                val gradientEndColor = if (isDark) Color(0xFF121212) else Color(0xFFE0E0E0)
+
                 val backgroundGradient = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.background,
-                        Color(0xFF1F1B24)
+                        gradientEndColor
                     )
                 )
 
@@ -83,8 +87,36 @@ fun GameScreen(
             modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
         )
 
-        // KROK 1: Wybór playlisty (ekran początkowy / wyszukiwarka)
-        if (viewModel.selectedPlaylist == null) {
+        // EKRAN PODSUMOWANIA
+        if (viewModel.isGameSessionFinished) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Koniec Gry!", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Twój wynik: ${viewModel.score} / ${viewModel.totalRounds}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { viewModel.resetPlaylistSelection() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Zagraj ponownie")
+                    }
+                }
+            }
+        }
+        // EKRAN WYBORU PLAYLISTY / WYSZUKIWARKA
+        else if (viewModel.selectedPlaylist == null) {
 
             // --- Pasek Wyszukiwania ---
             OutlinedTextField(
@@ -142,7 +174,7 @@ fun GameScreen(
 
             // --- Lista Playlist (Domyślne lub z wyników wyszukiwania) ---
             LazyColumn(
-                modifier = Modifier.weight(1f) // Zajmuje dostępną przestrzeń i pozwala na scrollowanie
+                modifier = Modifier.weight(1f)
             ) {
                 items(listToShow) { playlist ->
                     Card(
@@ -162,11 +194,9 @@ fun GameScreen(
                     }
                 }
             }
-
-        } else {
-            // =============================================================
-            // RESZTA WIDOKÓW POZOSTAJE NIEMAL BEZ ZMIAN (Odtwarzanie i gra)
-            // KROK 2: Playlista została wybrana, ale gra się jeszcze nie rozpoczęła
+        }
+        // EKRAN ROZGRYWKI
+        else {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -199,7 +229,7 @@ fun GameScreen(
                         Text(text = "Zmień playlistę", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
-                    // KROK 3: Właściwa rozgrywka
+                    // WŁAŚCIWA GRA
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -216,14 +246,16 @@ fun GameScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
+                                Text(text = "Runda: ${viewModel.currentRound}/${viewModel.totalRounds}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                                 Text(text = "Punkty: ${viewModel.score}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                Text(
-                                    text = "Próby: ${viewModel.attemptsLeft}",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp,
-                                    color = if (viewModel.attemptsLeft <= 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                                )
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Próby: ${viewModel.attemptsLeft}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = if (viewModel.attemptsLeft <= 2) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Wykonawca: ${viewModel.correctArtist}",
@@ -288,14 +320,14 @@ fun GameScreen(
                     } else {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { viewModel.playRandomSong(musicPlayer) },
+                            onClick = { viewModel.nextRound(musicPlayer) },
                             modifier = Modifier
                                 .fillMaxWidth(0.8f)
                                 .height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Text(text = "Następna piosenka", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                            Text(text = if (viewModel.currentRound >= viewModel.totalRounds) "Zakończ grę" else "Następna piosenka", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                         }
                     }
 
@@ -349,7 +381,7 @@ fun GameScreen(
                     TextButton(onClick = {
                         musicPlayer.stop()
                         viewModel.resetPlaylistSelection()
-                        viewModel.clearSearch() // Czyścimy przy powrocie
+                        viewModel.clearSearch()
                     }) {
                         Text(text = "← Wybierz inną playlistę", color = MaterialTheme.colorScheme.secondary)
                     }
