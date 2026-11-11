@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-// Model reprezentujący playlistę
 data class DeezerPlaylist(
     val id: Long,
     val name: String,
@@ -22,7 +21,7 @@ class GameViewModel : ViewModel() {
         private set
     var currentRound by mutableStateOf(1)
         private set
-    val totalRounds = 5 // Gra kończy się po 5 piosenkach
+    val totalRounds = 5
     var isGameSessionFinished by mutableStateOf(false)
         private set
     var userGuess by mutableStateOf("")
@@ -31,9 +30,11 @@ class GameViewModel : ViewModel() {
         private set
     var isPlaying by mutableStateOf(false)
         private set
-    var isFinished by mutableStateOf(false)
-        private set
     var correctArtist by mutableStateOf("")
+        private set
+    var correctCoverUrl by mutableStateOf("")
+        private set
+    var correctAlbum by mutableStateOf("")
         private set
     var isAnswerCorrect by mutableStateOf(false)
         private set
@@ -44,42 +45,67 @@ class GameViewModel : ViewModel() {
     var isRoundOver by mutableStateOf(false)
         private set
 
-    // --- NOWE ZMIENNE WYSZUKIWARKI ---
     var searchQuery by mutableStateOf("")
         private set
-    // Używamy mutableStateListOf aby Compose obserwowało zmiany na liście
     var searchResults = mutableStateListOf<DeezerPlaylist>()
         private set
     var isSearching by mutableStateOf(false)
         private set
 
-    // --- Domyślne playlisty ---
+    var songSuggestions = mutableStateListOf<SongSuggestion>()
+        private set
+    var showSuggestions by mutableStateOf(false)
+        private set
+
     val availablePlaylists = listOf(
         DeezerPlaylist(5123717724, "Hity lat 2000+", "Największe przeboje XXI wieku"),
         DeezerPlaylist(3227703762, "Rock Classics", "Ponadczasowe hymny rockowe"),
         DeezerPlaylist(1115594221, "Pop Top", "Świeże hity popowe"),
         DeezerPlaylist(1963962142, "Polski Rap", "Najlepsze kawałki PL rap"),
         DeezerPlaylist(1447230235, "Top 50", "Obecnie na czasie")
-        DeezerPlaylist(1578812305, "Rock Classics", "Ponadczasowe hymny rockowe"), // 1578812305
-        DeezerPlaylist(3227703762, "Pop Top", "Świeże hity popowe")
     )
 
     var selectedPlaylist by mutableStateOf<DeezerPlaylist?>(null)
         private set
 
     private var playlistTrackIds = listOf<Int>()
-    private var correctTitle = ""
+    var correctTitle = ""
+    private var currentTrackId = 0
 
-    fun updateGuess(newGuess: String) {
-        userGuess = newGuess
+    private val attemptDurations = listOf(200L, 1000L, 3000L, 6000L, 15000L)
+
+    // Powrót do ekranu głównego po błędzie sieci
+    fun handleNetworkError(musicPlayer: MusicPlayer) {
+        resetPlaylistSelection(musicPlayer)
+        message = "⚠️ Brak połączenia z siecią! Powrót do ekranu głównego."
     }
 
-    // NOWE: Metoda aktualizująca pole wyszukiwania
+    fun updateGuess(newGuess: String, musicPlayer: MusicPlayer) {
+        userGuess = newGuess
+        if (newGuess.length >= 2) {
+            viewModelScope.launch {
+                val suggestions = musicPlayer.searchTracks(newGuess)
+                songSuggestions.clear()
+                songSuggestions.addAll(suggestions)
+                showSuggestions = suggestions.isNotEmpty()
+            }
+        } else {
+            songSuggestions.clear()
+            showSuggestions = false
+        }
+    }
+
+    fun selectSuggestion(suggestion: SongSuggestion, musicPlayer: MusicPlayer) {
+        userGuess = suggestion.title
+        songSuggestions.clear()
+        showSuggestions = false
+        checkAnswer(musicPlayer)
+    }
+
     fun updateSearchQuery(query: String) {
         searchQuery = query
     }
 
-    // NOWE: Metoda wykonująca wyszukiwanie przez MusicPlayer
     fun searchForPlaylists(musicPlayer: MusicPlayer) {
         if (searchQuery.trim().isEmpty()) {
             searchResults.clear()
@@ -89,13 +115,16 @@ class GameViewModel : ViewModel() {
         isSearching = true
         viewModelScope.launch {
             val results = musicPlayer.searchPlaylists(searchQuery)
-            searchResults.clear()
-            searchResults.addAll(results)
+            if (results == null) {
+                handleNetworkError(musicPlayer)
+            } else {
+                searchResults.clear()
+                searchResults.addAll(results)
+            }
             isSearching = false
         }
     }
 
-    // NOWE: Czyści pole wyszukiwania i wyniki
     fun clearSearch() {
         searchQuery = ""
         searchResults.clear()
@@ -105,28 +134,43 @@ class GameViewModel : ViewModel() {
         selectedPlaylist = playlist
     }
 
-    fun resetPlaylistSelection() {
+    fun resetPlaylistSelection(musicPlayer: MusicPlayer) {
+        musicPlayer.stop()
         selectedPlaylist = null
         isSongLoaded = false
+        isGameSessionFinished = false
+        score = 0
+        currentRound = 1
+        userGuess = ""
+        isRoundOver = false
+        message = ""
+        incorrectGuesses.clear()
+        songSuggestions.clear()
+        showSuggestions = false
     }
 
     fun loadPlaylistAndPlay(musicPlayer: MusicPlayer) {
         val playlist = selectedPlaylist ?: return
 
         viewModelScope.launch {
+            musicPlayer.stop()
             message = "Pobieranie playlisty: ${playlist.name}..."
             userGuess = ""
             score = 0
-            currentRound = 1 // Reset rund
-            isGameSessionFinished = false // Reset stanu końca
+            currentRound = 1
+            isGameSessionFinished = false
             attemptsLeft = 6
             isAnswerCorrect = false
             isRoundOver = false
             incorrectGuesses.clear()
+            songSuggestions.clear()
+            showSuggestions = false
 
             val ids = musicPlayer.loadPlaylist(playlist.id)
 
-            if (ids.isNotEmpty()) {
+            if (ids == null) {
+                handleNetworkError(musicPlayer)
+            } else if (ids.isNotEmpty()) {
                 playlistTrackIds = ids
                 playRandomSong(musicPlayer)
             } else {
@@ -144,52 +188,53 @@ class GameViewModel : ViewModel() {
             playRandomSong(musicPlayer)
         }
     }
+
     fun playRandomSong(musicPlayer: MusicPlayer) {
         if (playlistTrackIds.isEmpty()) {
             message = "Brak utworów z dostępnym audio na tej playliście."
             return
         }
 
-        val randomId = playlistTrackIds.random()
+        currentTrackId = playlistTrackIds.random()
 
         isRoundOver = false
         isAnswerCorrect = false
         userGuess = ""
         attemptsLeft = 6
         incorrectGuesses.clear()
+        songSuggestions.clear()
+        showSuggestions = false
+
+        val duration = attemptDurations[0]
 
         viewModelScope.launch {
-            val result = musicPlayer.loadAndPlaySong(randomId) {
-                if (!isRoundOver) {
+            val result = musicPlayer.loadAndPlaySong(
+                trackId = currentTrackId,
+                durationMillis = duration,
+                onSongFinished = {
                     isPlaying = false
-                    isFinished = true
-                    message = "Utwór się skończył. Kliknij, aby odtworzyć ponownie."
+                    message = "Próbka zakończona. Wpisz tytuł!"
+                },
+                onNetworkError = {
+                    handleNetworkError(musicPlayer)
                 }
-            }
+            )
 
             if (result != null) {
                 correctTitle = result.first
                 correctArtist = result.second
+                correctCoverUrl = result.third
                 isSongLoaded = true
                 isPlaying = true
-                isFinished = false
-                message = "Zgadnij tytuł utworu! Pozostało prób: $attemptsLeft"
-            } else {
-                // JEŚLI UTWÓR JEST PUSTY/USZKODZONY:
-                // 1. Wyrzucamy to ID z naszej puli, żeby nie trafić na nie ponownie
+                message = "Zgadnij tytuł (Próba 1: 0.2s)!"
+            } else if (selectedPlaylist != null) {
                 val mutableIds = playlistTrackIds.toMutableList()
-                mutableIds.remove(randomId)
+                mutableIds.remove(currentTrackId)
                 playlistTrackIds = mutableIds
 
-                // 2. Automatycznie próbujemy załadować inny utwór, jeśli coś zostało
                 if (playlistTrackIds.isNotEmpty()) {
-                    message = "Pomijanie utworu bez dema audio..."
-                    playRandomSong(musicPlayer) // Rekurencyjne wywołanie dla nowego utworu
-                } else {
-                    message = "Żaden utwór na tej playliście nie posiada dema audio."
+                    playRandomSong(musicPlayer)
                 }
-                message = "Pominięto uszkodzony utwór, losuję kolejny..."
-                playRandomSong(musicPlayer)
             }
         }
     }
@@ -200,13 +245,16 @@ class GameViewModel : ViewModel() {
         val currentGuess = userGuess.trim()
         if (currentGuess.isEmpty()) return
 
+        songSuggestions.clear()
+        showSuggestions = false
+
         if (currentGuess.equals(correctTitle.trim(), ignoreCase = true)) {
             score += 1
             isAnswerCorrect = true
             isRoundOver = true
             isPlaying = false
-            musicPlayer.pause()
-            message = "🎉 Brawo! Poprawna odpowiedź. Kliknij, aby przejść dalej."
+            musicPlayer.stop()
+            message = "🎉 Brawo! Poprawna odpowiedź."
         } else {
             attemptsLeft -= 1
             incorrectGuesses.add(currentGuess)
@@ -216,36 +264,27 @@ class GameViewModel : ViewModel() {
             userGuess = ""
 
             if (attemptsLeft > 0) {
-                message = "❌ Błędnie! Pozostało prób: $attemptsLeft"
+                val attemptIndex = 6 - attemptsLeft
+                val nextDuration = if (attemptIndex < attemptDurations.size) attemptDurations[attemptIndex] else 15000L
+
+                musicPlayer.playSnippet(nextDuration)
+                val secondsText = if (nextDuration < 1000) "${nextDuration}ms" else "${nextDuration / 1000}s"
+                message = "❌ Błędnie! Odsłuch (${secondsText}). Pozostało prób: $attemptsLeft"
             } else {
                 isAnswerCorrect = false
                 isRoundOver = true
                 isPlaying = false
-                musicPlayer.pause()
-                message = "Koniec prób! Prawidłowy tytuł to: $correctTitle\n$correctArtist. Spróbuj kolejnej piosenki."
+                musicPlayer.stop()
+                message = "Koniec prób! Prawidłowy tytuł to: $correctTitle\n$correctArtist."
             }
         }
     }
 
     fun togglePlayPause(musicPlayer: MusicPlayer) {
         if (isRoundOver) return
-        when {
-            isFinished -> {
-                musicPlayer.restart()
-                isPlaying = true
-                isFinished = false
-                message = "Słuchaj uważnie! Pozostało prób: $attemptsLeft"
-            }
-            isPlaying -> {
-                musicPlayer.pause()
-                isPlaying = false
-                message = "Muzyka zatrzymana."
-            }
-            else -> {
-                musicPlayer.play()
-                isPlaying = true
-                message = "Odtwarzanie..."
-            }
-        }
+        val attemptIndex = 6 - attemptsLeft
+        val currentDuration = if (attemptIndex < attemptDurations.size) attemptDurations[attemptIndex] else 15000L
+        musicPlayer.playSnippet(currentDuration)
+        message = "Odtwarzanie próbki..."
     }
 }
