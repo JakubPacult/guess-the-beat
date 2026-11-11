@@ -30,6 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.guessthebeat.ui.theme.GuessTheBeatTheme
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 class MainActivity : ComponentActivity() {
     private val musicPlayer = MusicPlayer()
@@ -75,8 +79,17 @@ fun GameScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(14.dp),
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // logo
+        Image(
+            painter = painterResource(id = R.drawable.logo),
+            contentDescription = "Logo",
+            modifier = Modifier.size(240.dp)
+        )
         // Tytuł gry
         Text(
             text = "GuessTheBeat",
@@ -162,6 +175,7 @@ fun GameScreen(
             } else {
                 viewModel.availablePlaylists
             }
+        Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = if (viewModel.searchResults.isNotEmpty()) "Wyniki wyszukiwania:" else "Lub wybierz coś z polecanych:",

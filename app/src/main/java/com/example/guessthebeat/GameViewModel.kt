@@ -60,6 +60,8 @@ class GameViewModel : ViewModel() {
         DeezerPlaylist(1115594221, "Pop Top", "Świeże hity popowe"),
         DeezerPlaylist(1963962142, "Polski Rap", "Najlepsze kawałki PL rap"),
         DeezerPlaylist(1447230235, "Top 50", "Obecnie na czasie")
+        DeezerPlaylist(1578812305, "Rock Classics", "Ponadczasowe hymny rockowe"), // 1578812305
+        DeezerPlaylist(3227703762, "Pop Top", "Świeże hity popowe")
     )
 
     var selectedPlaylist by mutableStateOf<DeezerPlaylist?>(null)
@@ -186,6 +188,8 @@ class GameViewModel : ViewModel() {
                 } else {
                     message = "Żaden utwór na tej playliście nie posiada dema audio."
                 }
+                message = "Pominięto uszkodzony utwór, losuję kolejny..."
+                playRandomSong(musicPlayer)
             }
         }
     }
