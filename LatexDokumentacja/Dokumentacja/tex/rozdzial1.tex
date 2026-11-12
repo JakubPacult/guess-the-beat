@@ -1,0 +1,74 @@
+\newpage
+\section{Ogólne określenie wymagań}		%1
+%Ogólne określenie wymagań i zakresu programu (Czyli zleceniodawca określa wymagania programu) 
+
+\hspace{0.60cm}Głównym celem projektu ``Guess the Beat'' jest zaprojektowanie, implementacja oraz wdrożenie w pełni funkcjonalnej, wciągającej i intuicyjnej aplikacji mobilnej przeznaczonej dla systemów operacyjnych Android. Program ma za zadanie dostarczyć użytkownikom dynamicznej rozrywki muzycznej o charakterze edukacyjno-rozrywkowym, opierającej się na mechanice szybkiego rozpoznawania utworów muzycznych na podstawie krótkich próbek dźwiękowych. 
+
+Aplikacja została w całości napisana w nowoczesnym języku programowania Kotlin z wykorzystaniem zaawansowanych bibliotek platformy Android (takich jak Jetpack Compose / XML Layouts, MediaPlayer, Coroutines oraz Room Database). Zapewnia to wysoki poziom wydajności, płynność animacji interfejsu, asynchroniczne ładowanie danych audio oraz pełną stabilność działania nawet podczas długotrwałych sesji rozgrywki.
+
+\subsection{Założenia i szczegółowy zakres funkcjonalny projektu}  %1.1       
+
+\hspace{0.60cm}Zakres funkcjonalny programu został podzielony na kilka kluczowych obszarów operacyjnych, które szczegółowo definiują zachowanie aplikacji podczas interakcji z użytkownikiem oraz determinują architekturę oprogramowania:
+
+\begin{itemize}
+    \item \textbf{Główna mechanika rozgrywki i losowanie utworów:} 
+    Aplikacja w sposób losowy wybiera z wewnętrznej bazy danych krótki fragment (trwający standardowo od 3 do 5 sekund) popularnego utworu muzycznego. Głównym zadaniem gracza jest jak najszybsze odgadnięcie tytułu utworu bądź jego wykonawcy i wprowadzenie odpowiedzi za pomocą interfejsu dotykowego telefonu.
+    
+    \item \textbf{System wprowadzania odpowiedzi i walidacji tekstowej:} 
+    Interfejs mobilny wyposażony jest w responsywne pole tekstowe (\textit{EditText} w architekturze Android). System wspiera gracza poprzez dynamiczne podpowiedzi, mechanizm autokorekty oraz specjalny algorytm dopasowywania ciągów znaków (np. uwzględniający literówki czy wielkość liter za pomocą miary Levenshteina). Użytkownik zatwierdza wpisany tekst za pomocą przycisku akcji na ekranie lub bezpośrednio z poziomu klawiatury ekranowej smartfona.
+    
+    \item \textbf{System oceniania, punktacji i natychmiastowego feedbacku:} 
+    Bezpośrednio po zatwierdzeniu odpowiedzi aplikacja w czasie rzeczywistym weryfikuje poprawność wpisanego tekstu z wzorcem w bazie danych. Gracz otrzymuje punkty za poprawną odpowiedź, przy czym algorytm premiuje czas reakcji – im szybciej użytkownik odgadnie utwór i zatwierdzi poprawny tytuł, tym wyższy współczynnik punktowy (bonus za czas) zostaje doliczony do ogólnego wyniku rundy.
+    
+    \item \textbf{Baza utworów i kategorie tematyczne:} 
+    Aplikacja oferuje zróżnicowane pakiety muzyczne podzielone na kategorie tematyczne (np. Hity lat 80., Muzyka Pop, Rock, Rap, Muzyka Filmowa). Pozwala to użytkownikowi na pełne dopasowanie poziomu trudności oraz profilu muzycznego rozgrywki do własnych indywidualnych upodobań.
+    
+    \item \textbf{Tryby gry i zarządzanie statystykami lokalnymi:} 
+    Oprogramowanie uwzględnia tryb jednoosobowy (gra na czas i bicie rekordów punktowych) oraz lokalną tablicę wyników (\textit{High Scores}), która trwale przechowuje najlepsze rezultaty użytkownika przy użyciu lokalnej bazy danych Room lub mechanizmu SharedPreferences.
+    
+    \item \textbf{Wymagania niefunkcjonalne systemu:} 
+    Oprogramowanie charakteryzuje się niskim zapotrzebowaniem na pamięć operacyjną RAM, optymalnym wykorzystaniem baterii urządzenia, krótkim czasem buforowania próbek audio oraz pełną responsywnością interfejsu dostosowaną do różnych proporcji ekranów smartfonów (zarówno standardowych, jak i urządzeń z wycięciami na aparat).
+\end{itemize}
+
+%\footnote{Przykład odnośnika do książki\cite{legierski}.}.
+
+%rysunek
+%	\begin{figure}[!htb]
+%	\begin{center}
+%		\includegraphics[width=8cm]{rys/ans.png}
+%		\caption{Logo}
+%		\label{rys:rysunek001}
+%	\end{center}
+%\end{figure}
+
+\hspace{0.60cm}Projekt interfejsu graficznego aplikacji został podporządkowany regułom ergonomii mobilnej (\textit{Mobile-First}), co gwarantuje wygodną obsługę za pomocą jednej ręki. Główny ekran rozgrywki składa się z minimalistycznego odtwarzacza multimedialnego bazującego na klasie \textit{MediaPlayer} języka Kotlin, wyraźnego pola tekstowego przeznaczonego do wpisywania tytułu piosenki, animowanego wskaźnika postępu odtwarzanej próbki oraz dynamicznego timera odmierzającego czas do końca rundy.
+
+\subsection{Struktura modułów i architektura interfejsu w technologii Kotlin}
+
+\hspace{0.60cm}Architektura aplikacji została podzielona na logiczne ekrany (aktywności i fragmenty), które realizują poszczególne scenariusze przypadków użycia. Poniższa tabela przedstawia szczegółowe zestawienie głównych komponentów interfejsu użytkownika.
+
+%tabelka
+\begin{tabela}
+	{Zestawienie głównych ekranów aplikacji mobilnej oraz ich powiązanie z komponentami Kotlin}	%opis w spisie tabel
+	{Podsumowanie modułów interfejsu użytkownika w architekturze Android}	%opis przy tabeli
+	{
+		\begin{tabular}{|l|p{6.5cm}|l|} \hline
+			\textbf{Nazwa ekranu} & \textbf{Opis szczegółowy funkcjonalności} & \textbf{Główny komponent w Kotlinie} \\ \hline
+			Menu Główne & Wybór kategorii, poziomu trudności oraz inicjalizacja sesji & \texttt{MainActivity.kt} \\ \hline
+			Ekran Rozgrywki & Odtwarzanie próbek audio, timer i pole tekstowe & \texttt{GameActivity.kt} \\ \hline
+			Ekran Podsumowania & Prezentacja zdobytych punktów oraz statystyk czasu & \texttt{ScoreActivity.kt} \\ \hline
+			Ekran Ustawień & Zarządzanie głośnością, efektem dźwiękowym i bazą & \texttt{SettingsActivity.kt} \\ \hline
+		\end{tabular}
+	}
+	\label{tab:tablica001}
+\end{tabela}
+
+Tabela \ref{tab:tablica001} (s. \pageref{tab:tablica001}) precyzuje podział logiki interfejsu na poszczególne klasy kontrolerów w języku Kotlin, co ułatwia skalowanie projektu oraz jego późniejszą rozbudowę o kolejne funkcjonalności sieciowe.
+
+\subsection{Analiza przypadków użycia (Use Case) w procesie zgadywania piosenek}
+
+\hspace{0.60cm}W ramach specyfikacji wymagań systemowych wyróżniono trzy główne role oraz powiązane z nimi scenariusze interakcji z aplikacją mobilną:
+
+\begin{itemize}
+    \item \textbf{Użytkownik / Gracz:} Osoba korzystająca z aplikacji na telefonie. Do jego głównych zadań należy uruchomienie gry, wybranie preferowanej kategorii muzycznej, odsłuchanie wylosowanego fragmentu utworu, wpisanie tytułu w pole tekstowe oraz przeglądanie osiągniętych rezultatów.
+    \item \textbf{System odtwarzania audio:} Odpow

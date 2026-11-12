@@ -1,0 +1,60 @@
+\newpage
+\section{Określenie wymagań szczegółowych}		%2
+%Dokładne określenie wymagań aplikacji (cel, zakres, dane wejściowe) – np. opisać przyciski, czujniki, wygląd layautu, wyświetlenie okienek. Opisać zachowanie aplikacji – co po kliknięciu, zdarzenia automatyczne. Opisać możliwość dalszego rozwoju oprogramowania. Opisać zachowania aplikacji w niepożądanych sytuacjach.
+
+\hspace{0.60cm}Rozdział niniejszy przedstawia szczegółową specyfikację funkcjonalną oraz behawioralną aplikacji mobilnej „Guess the Beat” zrealizowanej w języku Kotlin na system operacyjny Android. Określono w nim strukturę interfejsu użytkownika (UI), dokładny układ kontrolek i przycisków na poszczególnych ekranach, automatyczne zdarzenia systemowe, reakcje oprogramowania na sytuacje awaryjne oraz perspektywy dalszego rozwoju projektu.
+
+\subsection{Szczegółowy opis interfejsu użytkownika i układu layoutów}
+
+\hspace{0.60cm}Interfejs graficzny aplikacji został zaprojektowany z użyciem nowoczesnych kontenerów widoków systemu Android (m.in. \textit{ConstraintLayout} oraz \textit{LinearLayout}), co zapewnia pełną elastyczność i skalowalność na ekranach smartfonów o różnych proporcjach i rozdzielczościach. 
+
+\begin{itemize}
+    \item \textbf{Layout Menu Głównego (\texttt{activity\_main.xml}):} 
+    Zawiera wyśśrodkowane logo aplikacji, estetyczne przyciski wyboru kategorii muzycznych (np. \textit{Pop}, \textit{Rock}, \textit{Lata 80.}), przycisk uruchamiający rozgrywkę (\textit{Start Game}) oraz przycisk przejścia do ekranu ustawień dźwięku i głośności. Każdy przycisk posiada zdefiniowany stan wciśnięcia (\textit{pressed state}) oraz subtelną animację powiększenia.
+    
+    \item \textbf{Layout Rozgrywki (\texttt{activity\_game.xml}):} 
+    Reprezentuje główny ekran gry. W jego górnej części umieszczono kołowy wskaźnik czasu (\textit{Circular ProgressBar}) odmierzający 5 sekund na odpowiedź. Poniżej znajduje się duży, pulsujący przycisk odtwarzania próbki audio (\textit{Play/Replay Sample}). Centralną część ekranu zajmuje pole tekstowe typu \textit{EditText} z podpowiedziami w czasie rzeczywistym oraz zatwierdzający przycisk tekstowy (\textit{Wyślij odpowiedź}).
+    
+    \item \textbf{Layout Podsumowania (\texttt{activity\_score.xml}):} 
+    Ekran końcowy wyświetlający podsumowanie sesji: zdobyte punkty ogółem, średni czas reakcji oraz przyciski nawigacyjne: \textit{Zagraj ponownie} oraz \textit{Powrót do menu głównego}.
+\end{itemize}
+
+%\footnote{Przykład odnośnika do książki\cite{legierski}.}.
+
+\subsection{Opis zachowania aplikacji i zdarzeń automatycznych}
+
+\hspace{0.60cm}Działanie aplikacji opiera się na ściśle zdefiniowanym cyklu życia aktywności systemu Android oraz asynchronicznych wątkach (\textit{Kotlin Coroutines}). Poniżej opisano kluczowe scenariusze interakcji oraz zdarzenia automatyczne:
+
+\begin{itemize}
+    \item \textbf{Zdarzenie kliknięcia „Start Game”:} Po naciśnięciu przycisku w Menu Głównym, aplikacja inicjalizuje instancję bazy danych, losuje pierwszy utwór z wybranej kategorii, przygotowuje bufor pliku dźwiękowego w pamięci podręcznej i płynnie przełącza kontekst na widok \texttt{GameActivity}.
+    \item \textbf{Automatyczny start odtwarzania audio:} Po załadowaniu ekranu rozgrywki, wątek w tle automatycznie uruchamia komponent \textit{MediaPlayer}, odtwarzając dokładnie 4-sekundowy wycinek utworu. Równocześnie uruchamia się odliczanie timera.
+    \item \textbf{Zdarzenie upływu czasu (Timeout):} Jeśli użytkownik nie zdąży wpisać odpowiedzi w wyznaczonym czasie (np. 5 sekund), zegar automatycznie wyzwala zdarzenie timeoutu: odtwarzacz jest wyciszany, na ekranie pojawia się komunikat o przekroczeniu czasu, a gracz otrzymuje 0 punktów za tę rundę i następuje przejście do kolejnego utworu lub podsumowania.
+    \item \textbf{Zdarzenie zatwierdzenia odpowiedzi:} Po wpisaniu tekstu w pole \textit{EditText} i kliknięciu przycisku zatwierdzenia, aplikacja porównuje wpisany ciąg znaków z poprawnym tytułem (uwzględniając normalizację wielkości liter oraz usuwanie polskich znaków diakrytycznych). W przypadku trafienia, system dolicza punkty bazowe powiększone o bonus czasowy i wyświetla animację sukcesu (zielona ramka).
+\end{itemize}
+
+%rysunek poglądowy prototypu
+
+
+
+\subsection{Zachowanie aplikacji w sytuacjach niepożądanych i awaryjnych}
+
+\hspace{0.60cm}W celu zapewnienia wysokiej niezawodności oprogramowania, aplikacja została wyposażona w mechanizmy obsługi błędów i wyjątków:
+
+\begin{itemize}
+    \item \textbf{Brak połączenia lub zasobów audio:} W sytuacji, gdy plik dźwiękowy próbki jest uszkodzony lub niedostępny w zasobach urządzenia, aplikacja przechwytuje wyjątek klasy \textit{IOException}, pomija uszkodzony utwór, loguje błąd w systemie i bezpiecznie wczytuje kolejny utwór z listy bez przerywania rozgrywki.
+    \item \textbf{Przerwanie pracy aplikacji (np. odebranie połączenia telefonicznego):} Zgodnie z cyklem życia aktywności systemu Android, w momencie przejścia aplikacji w stan uśpienia (\textit{onPause}), komponent \textit{MediaPlayer} automatycznie pauzuje odtwarzanie dźwięku, a stan gry (aktualny wynik i numer rundy) jest zapisywany w pamięci tymczasowej (\textit{onSaveInstanceState}), co chroni użytkownika przed utratą postępów.
+    \item \textbf{Błędne lub puste dane wejściowe:} Wprowadzenie pustego pola tekstowego i próba zatwierdzenia skutkuje wyświetleniem krótkiego komunikatu systemowego (\textit{Toast}) przypominającego o konieczności wpisania odpowiedzi, zapobiegając awarii programu.
+\end{itemize}
+
+\subsection{Możliwości dalszego rozwoju oprogramowania (Perspektywy)}
+
+\hspace{0.60cm}Architektura projektu została zaprojektowana w sposób modułowy, co umożliwia jej łatwą rozbudowę w przyszłych wersjach oprogramowania:
+
+\begin{itemize}
+    \item \textbf{Tryb wieloosobowy (Multiplayer online):} Wprowadzenie rozgrywek sieciowych w czasie rzeczywistym przy użyciu websockets lub Firebase, umożliwiające rywalizację graczy na odległość.
+    \item \textbf{Integracja z zewnętrznymi serwisami streamingowymi:} Podpięcie oficjalnego API Spotify lub Apple Music w celu dynamicznego pobierania 30-sekundowych próbek z legalnych źródeł chmurowych.
+    \item \textbf{Rozbudowane statystyki i osiągnięcia (\textit{Achievements}):} Dodanie systemu odznak za serie poprawnych odpowiedzi oraz wykresów postępów użytkownika w czasie.
+\end{itemize}
+
+%\subsection{Podsumowanie rozdziału}
+%\hspace{0.60cm}Opisane w niniejszym rozdziale wymagania szczegółowe stanowią solidną bazę...

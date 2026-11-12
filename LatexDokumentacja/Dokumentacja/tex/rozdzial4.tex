@@ -1,0 +1,76 @@
+\section{Implementacja}		%4
+%Wkleić szkielet kodu, wraz z komentarzami. Opisać zmienne, struktury do czego służą. Opisać procedury, metody co wykonują. Opisać nowe zdefiniowane klasy. Opisać dziedziczenie. Opisać nowo utworzone pliki za co odpowiadają.
+
+\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat” oraz ewolucję projektu. Zostały w nim omówione struktury najważniejszych plików, architektura utworzonych klas, zastosowane dziedziczenie, kluczowe zmienne, a także przebieg zmian i usprawnień wprowadzonych w ostatnich tygodniach prac.
+
+\subsection{Nowo utworzone pliki i ich odpowiedzialność}
+
+\hspace{0.60cm}Kod źródłowy aplikacji został podzielony zgodnie z dobrymi praktykami tworzenia nowoczesnych aplikacji na system Android w języku Kotlin. Główne pliki zaimplementowane w projekcie to:
+\begin{itemize}
+    \item \textbf{\texttt{MainActivity.kt}} – główny punkt wejścia aplikacji. Odpowiada za ustawienie motywu graficznego oraz inicjalizację startowego interfejsu.
+    \item \textbf{\texttt{GameViewModel.kt}} – klasa implementująca wzorzec projektowy MVVM (Model-View-ViewModel). Stanowi serce logiki gry, przechowując i aktualizując jej stan.
+    \item \textbf{\texttt{DeezerAPI.kt}} – plik zawierający dedykowaną klasę \texttt{MusicPlayer} oraz nowe struktury danych. Zarządza asynchronicznymi zapytaniami sieciowymi do API Deezer oraz odtwarzaniem audio.
+    \item \textbf{\texttt{GameScreen.kt} oraz \texttt{MainMenuScreen.kt}} – pliki zawierające zdefiniowane funkcje kompozywalne (tzw. \textit{composables}), które deklaratywnie budują poszczególne ekrany interfejsu użytkownika.
+\end{itemize}
+
+\subsection{Zdefiniowane klasy i dziedziczenie}
+
+\hspace{0.60cm}Architektura systemu opiera się na mechanizmach dziedziczenia dostarczanych przez framework Android:
+\begin{itemize}
+    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{ComponentActivity}. Daje to dostęp do cyklu życia komponentu oraz pozwala na użycie metody \texttt{setContent}, która osadza interfejs zbudowany w Jetpack Compose.
+    \item Klasa \texttt{GameViewModel} dziedziczy po systemowej klasie \texttt{ViewModel}. Dzięki temu obiekt ten „przeżywa” zmiany konfiguracji urządzenia (np. obrót ekranu), zapobiegając utracie aktualnego wyniku gracza czy postępu w rundzie.
+\end{itemize}
+
+\subsection{Implementacja logiki biznesowej (GameViewModel)}
+
+\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano szereg zmiennych obserwowalnych. Zmiana ich wartości automatycznie wymusza odświeżenie interfejsu użytkownika (rekompozycję). Poniżej przedstawiono szkielet klasy wraz z opisem kluczowych zmiennych i metod:
+
+\begin{verbatim}
+class GameViewModel : ViewModel() {
+    
+    // --- ZMIENNE PRZECHOWUJACE STAN ROZGRYWKI ---
+    var score by mutableStateOf(0)             // Aktualny wynik gracza
+    var currentRound by mutableStateOf(1)      // Obecny numer rundy
+    val totalRounds = 5                        // Stala - limit rund w grze
+    var attemptsLeft by mutableStateOf(6)      // Liczba pozostalych prob
+    var isGameSessionFinished by mutableStateOf(false) // Flaga konca gry
+    
+    // --- ZMIENNE DOTYCZACE OBECNEGO UTWORU ---
+    var correctArtist by mutableStateOf("")    // Nazwa szukanego wykonawcy
+    var correctAlbum by mutableStateOf("")     // Nazwa szukanego albumu
+    var correctCoverUrl by mutableStateOf("")  // Adres URL okładki
+    
+    // --- LISTY I STATUSY ---
+    val incorrectGuesses = mutableStateListOf<String>() // Bledne odpowiedzi
+    var isPlaying by mutableStateOf(false)     // Flaga dzialania odtwarzacza
+    
+    // Metoda weryfikujaca odpowiedz wpisana przez gracza
+    fun checkGuess(guess: String) {
+        /*
+          Cialo metody:
+          1. Normalizacja tekstu.
+          2. Sprawdzenie poprawnosci z 'correctArtist'.
+          3. Aktualizacja punktacji lub liczby prob.
+        */
+    }
+    
+    // Procedura przechodzaca do kolejnej rundy
+    fun nextRound() {
+        /* Inkrementuje currentRound, losuje nowy utwor */
+    }
+    
+    // Procedura resetujaca stan gry do poczatkowego
+    fun resetGame() {
+        /* Zeruje score, ustawia currentRound na 1 */
+    }
+}
+\end{verbatim}
+
+\subsection{Przebieg zmian i rozwoju aplikacji w ostatnich tygodniach}
+
+\hspace{0.60cm}W trakcie prac nad projektem architektura aplikacji przeszła ewolucję, której celem było zwiększenie stabilności oraz responsywności interfejsu. Główne etapy i zmiany wdrożone w ostatnim okresie obejmują:
+\begin{enumerate}
+    \item \textbf{Optymalizację zapytań sieciowych:} Wprowadzenie asynchronicznych koprocedur Kotlin (\textit{Coroutines}) w klasie \texttt{MusicPlayer} w celu wyeliminowania zacięć interfejsu podczas pobierania próbek audio i metadanych z API Deezer.
+    \item \textbf{Rozbudowę mechanizmu prób i zgadwania:} Zaimplementowano dynamiczną listę błędnych odpowiedzi (\texttt{incorrectGuesses}) oraz licznik pozostałych prób (\texttt{attemptsLeft}), co zwiększyło atrakcyjność rozgrywki.
+    \item \textbf{Poprawę obsługi błędów sieciowych:} Dodano zabezpieczenia w obsłudze odtwarzacza (\texttt{MediaPlayer}), obsługujące brak dostępu do internetu lub niedostępność konkretnych próbek audio w bazie zewnętrznej.
+\end{enumerate}
