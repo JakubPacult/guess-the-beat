@@ -1,5 +1,7 @@
 package com.example.guessthebeat
 
+import android.content.Context
+import android.hardware.SensorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,24 +10,44 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-
 @Composable
 fun GameScreen(
     musicPlayer: MusicPlayer,
     viewModel: GameViewModel
 ) {
+    val context = LocalContext.current
+
+    // AUTOMATYCZNE URUCHAMIANIE I WYŁĄCZANIE CZUJNIKA OBROTU
+    DisposableEffect(Unit) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val flipDetector = FlipDetector(sensorManager) {
+            if (viewModel.isSongLoaded && !viewModel.isRoundOver) {
+                viewModel.skipCurrentAttempt(musicPlayer)
+            }
+        }
+
+        onDispose {
+            // Sprzątamy po wyjściu z ekranu
+            flipDetector.unregister(sensorManager)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +69,7 @@ fun GameScreen(
                     Text("Koniec Gry!", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Twój wynik: ${viewModel.score} / ${viewModel.totalRounds}",
+                        text = "Twój wynik: ${viewModel.score} / ${viewModel.maxScore}",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -190,23 +212,41 @@ fun GameScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // --- 3 STANOWY PRZYCISK PLAY / PAUSE / REFRESH ---
+            val playButtonIcon = when {
+                viewModel.isPlaying -> Icons.Default.Pause
+                viewModel.isRoundOver -> Icons.Default.Refresh
+                else -> Icons.Default.PlayArrow
+            }
+
             if (!viewModel.isRoundOver) {
                 Button(
-                    onClick = { viewModel.togglePlayPause(musicPlayer) },
-                    modifier = Modifier.size(70.dp),
+                    onClick = {
+                        if (viewModel.isPlaying) {
+                            musicPlayer.pause()
+                            viewModel.isPlaying = false
+                        } else if (viewModel.isRoundOver) {
+                            musicPlayer.playSnippet(15000L)
+                            viewModel.isPlaying = true
+                        } else {
+                            musicPlayer.playSnippet(viewModel.getCurrentSnippetDuration())
+                            viewModel.isPlaying = true
+                        }
+                    },
+                    modifier = Modifier.size(140.dp),
                     shape = CircleShape,
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
+                        imageVector = playButtonIcon,
                         contentDescription = "Odtwórz próbkę",
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(80.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 💡 ZMIANA: PRZEWIJANA LISTA PODPOWIEDZI Z OGRANICZONĄ WYSOKOŚCIĄ (MAX 180.DP)
+                // PRZEWIJANA LISTA PODPOWIEDZI Z OGRANICZONĄ WYSOKOŚCIĄ (MAX 180.DP)
                 if (viewModel.showSuggestions && viewModel.songSuggestions.isNotEmpty()) {
                     Card(
                         modifier = Modifier
@@ -219,7 +259,7 @@ fun GameScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 180.dp) // Limit wysokości zapobiega rozpychaniu ekranu!
+                                .heightIn(max = 180.dp)
                                 .verticalScroll(rememberScrollState())
                                 .padding(4.dp)
                         ) {
@@ -238,14 +278,44 @@ fun GameScreen(
                     }
                 }
 
-                OutlinedTextField(
-                    value = viewModel.userGuess,
-                    onValueChange = { viewModel.updateGuess(it, musicPlayer) },
-                    label = { Text("Wpisz tytuł piosenki") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // --- WYSZUKIWARKA ORAZ PRZYCISK SKIP OBOK NIEJ ---
+                // --- WYSZUKIWARKA ORAZ PRZYCISK SKIP ETAPU OBOK NIEJ ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = viewModel.userGuess,
+                        onValueChange = { viewModel.updateGuess(it, musicPlayer) },
+                        // Używamy placeholder zamiast label, żeby pole miało stabilną, równą wysokość bez wystającej etykiety
+                        placeholder = { Text("Wpisz tytuł piosenki") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                    )
+
+                    // Przycisk pomijania etapu czasowego (Skip)
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable { viewModel.skipCurrentAttempt(musicPlayer) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Pomiń i posłuchaj dłuższego fragmentu",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -273,7 +343,7 @@ fun GameScreen(
             if (viewModel.message.isNotEmpty()) {
                 val messageColor = when {
                     viewModel.message.contains("Brawo") -> Color(0xFF00E676)
-                    viewModel.message.contains("Błędnie") || viewModel.message.contains("Koniec prób") || viewModel.message.contains("Brak połączenia") -> MaterialTheme.colorScheme.error
+                    viewModel.message.contains("Błędnie") || viewModel.message.contains("Koniec prób") || viewModel.message.contains("Brak połączenia") || viewModel.message.contains("Pominięto") -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onSurface
                 }
 

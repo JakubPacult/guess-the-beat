@@ -1,6 +1,7 @@
 package com.example.guessthebeat
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,7 +30,6 @@ class GameViewModel : ViewModel() {
     var isSongLoaded by mutableStateOf(false)
         private set
     var isPlaying by mutableStateOf(false)
-        private set
     var correctArtist by mutableStateOf("")
         private set
     var correctCoverUrl by mutableStateOf("")
@@ -72,7 +72,26 @@ class GameViewModel : ViewModel() {
     var correctTitle = ""
     private var currentTrackId = 0
 
-    private val attemptDurations = listOf(200L, 1000L, 3000L, 6000L, 15000L)
+    // 6 poziomów czasu odsłuchu (dla 6 prób)
+    private val attemptDurations = listOf(200L, 1000L, 3000L, 6000L, 10000L, 15000L)
+
+    var totalScore by mutableStateOf(0)
+        private set
+
+    // Słownik punktacji za poszczególne próby (indeks 0 = 1. próba, indeks 5 = 6. próba)
+    private val attemptScores = listOf(5000, 4000, 3000, 2000, 1000, 500)
+
+    val maxScore = 25000
+
+    // 💡 Pomocnicza funkcja zwracająca czas trwania obecnego kodu na podstawie prób
+    fun getCurrentSnippetDuration(): Long {
+        val attemptIndex = 6 - attemptsLeft
+        return if (attemptIndex in attemptDurations.indices) {
+            attemptDurations[attemptIndex]
+        } else {
+            15000L
+        }
+    }
 
     // Powrót do ekranu głównego po błędzie sieci
     fun handleNetworkError(musicPlayer: MusicPlayer) {
@@ -136,6 +155,7 @@ class GameViewModel : ViewModel() {
 
     fun resetPlaylistSelection(musicPlayer: MusicPlayer) {
         musicPlayer.stop()
+        totalScore = 0
         selectedPlaylist = null
         isSongLoaded = false
         isGameSessionFinished = false
@@ -155,6 +175,7 @@ class GameViewModel : ViewModel() {
         viewModelScope.launch {
             musicPlayer.stop()
             message = "Pobieranie playlisty: ${playlist.name}..."
+            totalScore = 0
             userGuess = ""
             score = 0
             currentRound = 1
@@ -197,6 +218,7 @@ class GameViewModel : ViewModel() {
 
         currentTrackId = playlistTrackIds.random()
 
+        totalScore = 0
         isRoundOver = false
         isAnswerCorrect = false
         userGuess = ""
@@ -249,12 +271,15 @@ class GameViewModel : ViewModel() {
         showSuggestions = false
 
         if (currentGuess.equals(correctTitle.trim(), ignoreCase = true)) {
-            score += 1
+            val attemptIndex = 6 - attemptsLeft
+            val earnedPoints = if (attemptIndex in attemptScores.indices) attemptScores[attemptIndex] else 0
+
+            score += earnedPoints
             isAnswerCorrect = true
             isRoundOver = true
             isPlaying = false
             musicPlayer.stop()
-            message = "🎉 Brawo! Poprawna odpowiedź."
+            message = "🎉 Brawo! Poprawna odpowiedź (+${earnedPoints} pkt)."
         } else {
             attemptsLeft -= 1
             incorrectGuesses.add(currentGuess)
@@ -264,9 +289,7 @@ class GameViewModel : ViewModel() {
             userGuess = ""
 
             if (attemptsLeft > 0) {
-                val attemptIndex = 6 - attemptsLeft
-                val nextDuration = if (attemptIndex < attemptDurations.size) attemptDurations[attemptIndex] else 15000L
-
+                val nextDuration = getCurrentSnippetDuration()
                 musicPlayer.playSnippet(nextDuration)
                 val secondsText = if (nextDuration < 1000) "${nextDuration}ms" else "${nextDuration / 1000}s"
                 message = "❌ Błędnie! Odsłuch (${secondsText}). Pozostało prób: $attemptsLeft"
@@ -275,16 +298,84 @@ class GameViewModel : ViewModel() {
                 isRoundOver = true
                 isPlaying = false
                 musicPlayer.stop()
-                message = "Koniec prób! Prawidłowy tytuł to: $correctTitle\n$correctArtist."
+                message = "Koniec prób! 0 punktów. Prawidłowy tytuł to: $correctTitle\n$correctArtist."
             }
         }
     }
 
     fun togglePlayPause(musicPlayer: MusicPlayer) {
         if (isRoundOver) return
-        val attemptIndex = 6 - attemptsLeft
-        val currentDuration = if (attemptIndex < attemptDurations.size) attemptDurations[attemptIndex] else 15000L
+        val currentDuration = getCurrentSnippetDuration()
         musicPlayer.playSnippet(currentDuration)
         message = "Odtwarzanie próbki..."
+    }
+
+    // --- 💡 DODANA FUNKCJA SKIP SONG (kończy rundę z 0 pkt, gdy skończą się próby lub po wymuszonym pominięciu) ---
+    fun skipSong(musicPlayer: MusicPlayer) {
+        if (isRoundOver) return
+
+        musicPlayer.stop()
+        isRoundOver = true
+        isPlaying = false
+        attemptsLeft = 0
+        isAnswerCorrect = false
+        message = "⏭️ Koniec prób. Prawidłowy tytuł to: $correctTitle - $correctArtist."
+    }
+
+    // --- 💡 POPRAWIONA FUNKCJA SKIPOWANIA ETAPU CZASOWEGO ---
+    fun skipCurrentAttempt(musicPlayer: MusicPlayer) {
+        if (isRoundOver) return
+
+        if (attemptsLeft > 1) {
+            attemptsLeft -= 1
+            val nextDuration = getCurrentSnippetDuration()
+
+            musicPlayer.playSnippet(nextDuration)
+            isPlaying = true
+            val secondsText = if (nextDuration < 1000) "${nextDuration}ms" else "${nextDuration / 1000}s"
+            message = "⏭️ Pominięto próbę. Nowy czas odsłuchu: ${secondsText}. Pozostało prób: $attemptsLeft"
+        } else {
+            skipSong(musicPlayer)
+        }
+    }
+
+    // Nawigacja
+    var currentScreen by mutableStateOf("menu")
+        private set
+
+    fun navigateTo(screen: String) {
+        currentScreen = screen
+    }
+
+    var showExitConfirmation by mutableStateOf(false)
+        private set
+
+    private var pendingDestination: String = "menu"
+
+    fun requestExit(destination: String) {
+        if (selectedPlaylist != null && !isGameSessionFinished) {
+            pendingDestination = destination
+            showExitConfirmation = true
+        } else {
+            navigateToDestination(destination)
+        }
+    }
+
+    fun confirmExit(musicPlayer: MusicPlayer) {
+        showExitConfirmation = false
+        val dest = pendingDestination
+        navigateToDestination(dest)
+
+        if (dest == "menu") {
+            resetPlaylistSelection(musicPlayer)
+        }
+    }
+
+    fun dismissExit() {
+        showExitConfirmation = false
+    }
+
+    private fun navigateToDestination(destination: String) {
+        currentScreen = destination
     }
 }
