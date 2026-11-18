@@ -61,35 +61,51 @@ fun MainContainer(
     musicPlayer: MusicPlayer,
     viewModel: GameViewModel = viewModel()
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(viewModel = viewModel, musicPlayer = musicPlayer)
+        },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // 💡 ZMIANA: Ignorujemy dolny padding z Scaffolda, żeby lista wjeżdżała POD pasek!
+                .padding(top = innerPadding.calculateTopPadding())
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Stałe logo i nagłówek na górze aplikacji
-        Image(
-            painter = painterResource(id = R.drawable.logo),
-            contentDescription = "Logo",
-            modifier = Modifier.size(140.dp)
-        )
-        Text(
-            text = "GuessTheBeat",
-            style = MaterialTheme.typography.displaySmall.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-        )
+            Image(
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(120.dp)
+            )
+            Text(
+                text = "GuessTheBeat",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+            )
 
-        // Inteligentne przełączanie między menu głównym a grą na podstawie stanu w ViewModel
-        if (viewModel.selectedPlaylist == null) {
-            MainMenuScreen(viewModel = viewModel, musicPlayer = musicPlayer)
-        } else {
-            GameScreen(musicPlayer = musicPlayer, viewModel = viewModel)
+            when {
+                viewModel.currentScreen == "login" -> {
+                    LoginScreen()
+                }
+                viewModel.selectedPlaylist == null -> {
+                    MainMenuScreen(viewModel = viewModel, musicPlayer = musicPlayer)
+                }
+                else -> {
+                    GameScreen(musicPlayer = musicPlayer, viewModel = viewModel)
+                }
+            }
+
+            // 💡 Pusty odstęp na końcu, żeby ostatni element na liście dało się przewinąć ponad pasek
+            Spacer(modifier = Modifier.height(90.dp))
         }
     }
 }
