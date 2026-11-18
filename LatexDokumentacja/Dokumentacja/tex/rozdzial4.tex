@@ -1,76 +1,362 @@
 \section{Implementacja}		%4
-%Wkleić szkielet kodu, wraz z komentarzami. Opisać zmienne, struktury do czego służą. Opisać procedury, metody co wykonują. Opisać nowe zdefiniowane klasy. Opisać dziedziczenie. Opisać nowo utworzone pliki za co odpowiadają.
 
-\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat” oraz ewolucję projektu. Zostały w nim omówione struktury najważniejszych plików, architektura utworzonych klas, zastosowane dziedziczenie, kluczowe zmienne, a także przebieg zmian i usprawnień wprowadzonych w ostatnich tygodniach prac.
+\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat”[cite: 5]. Omówiono w nim strukturę pakietu \texttt{com.example.guessthebeat}, zastosowane dziedziczenie, autentyczne fragmenty kodu źródłowego wszystkich kluczowych klas i widoków oraz przebieg zmian wdrożonych w trakcie prac projektowych[cite: 5, 7, 8, 9, 10, 11, 12].
 
-\subsection{Nowo utworzone pliki i ich odpowiedzialność}
+\subsection{Struktura plików źródłowych i ich odpowiedzialność}
 
-\hspace{0.60cm}Kod źródłowy aplikacji został podzielony zgodnie z dobrymi praktykami tworzenia nowoczesnych aplikacji na system Android w języku Kotlin. Główne pliki zaimplementowane w projekcie to:
+\hspace{0.60cm}Kod źródłowy projektu został podzielony na wyspecjalizowane pliki zgodne z architekturą MVVM (Model-View-ViewModel)[cite: 5]:
 \begin{itemize}
-    \item \textbf{\texttt{MainActivity.kt}} – główny punkt wejścia aplikacji. Odpowiada za ustawienie motywu graficznego oraz inicjalizację startowego interfejsu.
-    \item \textbf{\texttt{GameViewModel.kt}} – klasa implementująca wzorzec projektowy MVVM (Model-View-ViewModel). Stanowi serce logiki gry, przechowując i aktualizując jej stan.
-    \item \textbf{\texttt{DeezerAPI.kt}} – plik zawierający dedykowaną klasę \texttt{MusicPlayer} oraz nowe struktury danych. Zarządza asynchronicznymi zapytaniami sieciowymi do API Deezer oraz odtwarzaniem audio.
-    \item \textbf{\texttt{GameScreen.kt} oraz \texttt{MainMenuScreen.kt}} – pliki zawierające zdefiniowane funkcje kompozywalne (tzw. \textit{composables}), które deklaratywnie budują poszczególne ekrany interfejsu użytkownika.
+    \item \textbf{\texttt{MainActivity.kt}} – punkt wejścia aplikacji[cite: 5, 11]. Inicjalizuje instancję klasy \texttt{MusicPlayer}, konfiguruje motyw graficzny (\texttt{GuessTheBeatTheme}) z tłem gradientowym oraz zarządza cyklem życia odtwarzacza w metodzie \texttt{onPause()}[cite: 11].
+    \item \textbf{\texttt{GameViewModel.kt}} – główny kontroler stanu aplikacji[cite: 5, 10]. Przechowuje aktualny wynik, numer rundy, listę predefiniowanych playlist, historię błędnych odpowiedzi oraz zarządza komunikacją między interfejsem a warstwą sieciową[cite: 10].
+    \item \textbf{\texttt{DeezerAPI.kt}} – warstwa sieciowa i multimedialna[cite: 5, 8]. Zawiera model danych \texttt{SongSuggestion} oraz klasę \texttt{MusicPlayer}, odpowiedzialną za zapytania HTTP do API Deezer i sterowanie obiektem \texttt{MediaPlayer}[cite: 8].
+    \item \textbf{\texttt{MainMenuScreen.kt}} – deklaratywny widok menu głównego, zawierający wyszukiwarkę playlist w bazie Deezer oraz listę polecanych kategorii muzycznych[cite: 5, 12].
+    \item \textbf{\texttt{GameScreen.kt}} – deklaratywny widok rozgrywki, obsługujący trzy stany ekranu: oczekiwanie na start, właściwą rozgrywkę z paskiem postępu i listą podpowiedzi oraz kartę podsumowania końcowego[cite: 5, 9].
+    \item \textbf{\texttt{FlipDetector.kt}} – moduł sprzętowy implementujący interfejs \texttt{SensorEventListener}, odpowiedzialny za detekcję obrotu smartfona ekranem do dołu za pomocą akcelerometru[cite: 7].
 \end{itemize}
 
-\subsection{Zdefiniowane klasy i dziedziczenie}
+\subsection{Dziedziczenie i reaktywne zarządzanie stanem}
 
-\hspace{0.60cm}Architektura systemu opiera się na mechanizmach dziedziczenia dostarczanych przez framework Android:
+\hspace{0.60cm}Architektura systemu opiera się na mechanizmach dziedziczenia dostarczanych przez platformę Android:
 \begin{itemize}
-    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{ComponentActivity}. Daje to dostęp do cyklu życia komponentu oraz pozwala na użycie metody \texttt{setContent}, która osadza interfejs zbudowany w Jetpack Compose.
-    \item Klasa \texttt{GameViewModel} dziedziczy po systemowej klasie \texttt{ViewModel}. Dzięki temu obiekt ten „przeżywa” zmiany konfiguracji urządzenia (np. obrót ekranu), zapobiegając utracie aktualnego wyniku gracza czy postępu w rundzie.
+    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{ComponentActivity}, co umożliwia osadzenie drzewa widoków Jetpack Compose za pomocą funkcji \texttt{setContent}[cite: 5, 11].
+    \item Klasa \texttt{GameViewModel} dziedziczy po \texttt{androidx.lifecycle.ViewModel}[cite: 5, 10]. Wykorzystuje delegaty \texttt{mutableStateOf} oraz \texttt{mutableStateListOf}, dzięki czemu każda zmiana wartości zmiennej (np. dodanie błędnego strzału czy zmiana treści komunikatu) automatycznie wyzwala rekompozycję odpowiednich elementów interfejsu[cite: 5, 10].
+    \item Klasa \texttt{FlipDetector} implementuje interfejs \texttt{SensorEventListener}, umożliwiając nasłuchiwanie zdarzeń sprzętowych czujnika ruchu[cite: 7].
 \end{itemize}
 
-\subsection{Implementacja logiki biznesowej (GameViewModel)}
+\subsection{Główna aktywność i nawigacja reaktywna (MainActivity.kt)}
 
-\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano szereg zmiennych obserwowalnych. Zmiana ich wartości automatycznie wymusza odświeżenie interfejsu użytkownika (rekompozycję). Poniżej przedstawiono szkielet klasy wraz z opisem kluczowych zmiennych i metod:
+\hspace{0.60cm}W pliku \texttt{MainActivity.kt} zaimplementowano główny kontener widoku (\texttt{MainContainer})[cite: 11]. Zamiast tradycyjnego przełączania wielu aktywności za pomocą obiektów \texttt{Intent}, aplikacja dynamicznie podmienia funkcje kompozywalne na podstawie wartości zmiennej \texttt{viewModel.selectedPlaylist}[cite: 11]. Dodatkowo funkcja \texttt{isSystemInDarkTheme()} automatycznie dobiera kolorystykę gradientu tła do ustawień systemowych urządzenia[cite: 11].
 
-\begin{verbatim}
-class GameViewModel : ViewModel() {
-    
-    // --- ZMIENNE PRZECHOWUJACE STAN ROZGRYWKI ---
-    var score by mutableStateOf(0)             // Aktualny wynik gracza
-    var currentRound by mutableStateOf(1)      // Obecny numer rundy
-    val totalRounds = 5                        // Stala - limit rund w grze
-    var attemptsLeft by mutableStateOf(6)      // Liczba pozostalych prob
-    var isGameSessionFinished by mutableStateOf(false) // Flaga konca gry
-    
-    // --- ZMIENNE DOTYCZACE OBECNEGO UTWORU ---
-    var correctArtist by mutableStateOf("")    // Nazwa szukanego wykonawcy
-    var correctAlbum by mutableStateOf("")     // Nazwa szukanego albumu
-    var correctCoverUrl by mutableStateOf("")  // Adres URL okładki
-    
-    // --- LISTY I STATUSY ---
-    val incorrectGuesses = mutableStateListOf<String>() // Bledne odpowiedzi
-    var isPlaying by mutableStateOf(false)     // Flaga dzialania odtwarzacza
-    
-    // Metoda weryfikujaca odpowiedz wpisana przez gracza
-    fun checkGuess(guess: String) {
-        /*
-          Cialo metody:
-          1. Normalizacja tekstu.
-          2. Sprawdzenie poprawnosci z 'correctArtist'.
-          3. Aktualizacja punktacji lub liczby prob.
-        */
+\begin{lstlisting}[language=Kotlin, caption={Implementacja klasy MainActivity oraz głównego kontenera nawigacji w pliku MainActivity.kt}, label={lst:main_activity}]
+class MainActivity : ComponentActivity() {
+    private val musicPlayer = MusicPlayer()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            GuessTheBeatTheme {
+                val isDark = isSystemInDarkTheme()
+                val gradientEndColor = if (isDark) Color(0xFF121212) else Color(0xFFE0E0E0)
+
+                val backgroundGradient = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.background,
+                        gradientEndColor
+                    )
+                )
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(backgroundGradient),
+                    color = Color.Transparent
+                ) {
+                    MainContainer(musicPlayer = musicPlayer)
+                }
+            }
+        }
     }
-    
-    // Procedura przechodzaca do kolejnej rundy
-    fun nextRound() {
-        /* Inkrementuje currentRound, losuje nowy utwor */
-    }
-    
-    // Procedura resetujaca stan gry do poczatkowego
-    fun resetGame() {
-        /* Zeruje score, ustawia currentRound na 1 */
+
+    override fun onPause() {
+        super.onPause()
+        musicPlayer.stop()
     }
 }
-\end{verbatim}
+
+@Composable
+fun MainContainer(
+    musicPlayer: MusicPlayer,
+    viewModel: GameViewModel = viewModel()
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        Image(
+            painter = painterResource(id = R.drawable.logo),
+            contentDescription = "Logo",
+            modifier = Modifier.size(140.dp)
+        )
+        Text(
+            text = "GuessTheBeat",
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+        )
+
+        if (viewModel.selectedPlaylist == null) {
+            MainMenuScreen(viewModel = viewModel, musicPlayer = musicPlayer)
+        } else {
+            GameScreen(musicPlayer = musicPlayer, viewModel = viewModel)
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Implementacja menu głównego i wyszukiwarki (MainMenuScreen.kt)}
+
+\hspace{0.60cm}Ekran startowy aplikacji (\texttt{MainMenuScreen}) umożliwia użytkownikowi wybór jednej z predefiniowanych list odtwarzania lub przeszukanie pełnej bazy serwisu Deezer[cite: 12]. W trakcie wykonywania zapytania sieciowego przycisk wyszukiwania jest blokowany (\texttt{enabled = !viewModel.isSearching}), a wewnątrz niego wyświetlany jest wskaźnik ładowania \texttt{CircularProgressIndicator}[cite: 12].
+
+\begin{lstlisting}[language=Kotlin, caption={Implementacja wyszukiwarki i listy playlist w pliku MainMenuScreen.kt}, label={lst:main_menu_screen}]
+@Composable
+fun MainMenuScreen(
+    viewModel: GameViewModel,
+    musicPlayer: MusicPlayer
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        OutlinedTextField(
+            value = viewModel.searchQuery,
+            onValueChange = { viewModel.updateSearchQuery(it) },
+            label = { Text("Wyszukaj playliste (np. Rock)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            trailingIcon = {
+                if (viewModel.searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.clearSearch() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Wyczysc")
+                    }
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = { viewModel.searchForPlaylists(musicPlayer) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = viewModel.searchQuery.isNotBlank() && !viewModel.isSearching
+        ) {
+            if (viewModel.isSearching) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                Icon(Icons.Default.Search, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Szukaj w Deezer")
+            }
+        }
+
+        val listToShow = if (viewModel.searchResults.isNotEmpty()) {
+            viewModel.searchResults
+        } else {
+            viewModel.availablePlaylists
+        }
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            listToShow.forEach { playlist ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable { viewModel.selectPlaylist(playlist) },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = playlist.name, style = MaterialTheme.typography.titleMedium)
+                        Text(text = playlist.description, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Implementacja warstwy sieciowej i audio (DeezerAPI.kt)}
+
+\hspace{0.60cm}Poniższy listing przedstawia implementację klasy \texttt{MusicPlayer}, w szczególności asynchroniczne ładowanie i odtwarzanie próbki utworu z wykorzystaniem \texttt{prepareAsync()} oraz obsługę limitu czasu odtwarzania za pomocą obiektu \texttt{Handler}[cite: 8]:
+
+\begin{lstlisting}[language=Kotlin, caption={Implementacja odtwarzania próbek i komunikacji z Deezer API w pliku DeezerAPI.kt}, label={lst:deezer_api_real}]
+data class SongSuggestion(
+    val id: Int,
+    val title: String,
+    val artist: String
+)
+
+class MusicPlayer {
+    private var mediaPlayer: MediaPlayer? = null
+    private val handler = Handler(Looper.getMainLooper())
+
+    suspend fun loadAndPlaySong(
+        trackId: Int,
+        durationMillis: Long,
+        onSongFinished: () -> Unit,
+        onNetworkError: () -> Unit
+    ): Triple<String, String, String>? {
+        stop()
+        return try {
+            val jsonString = withContext(Dispatchers.IO) {
+                URL("https://api.deezer.com/track/$trackId?ts=${System.currentTimeMillis()}").readText()
+            }
+            val jsonObject = JSONObject(jsonString)
+            val previewUrl = jsonObject.optString("preview", "")
+
+            if (previewUrl.isEmpty()) return null
+
+            val title = jsonObject.getString("title")
+            val artist = jsonObject.getJSONObject("artist").getString("name")
+            val coverUrl = jsonObject.getJSONObject("album").optString("cover_medium", "")
+
+            val newPlayer = MediaPlayer().apply {
+                setDataSource(previewUrl)
+                setOnPreparedListener { player ->
+                    player.start()
+                    handler.postDelayed({
+                        if (isPlaying) {
+                            pause()
+                            onSongFinished()
+                        }
+                    }, durationMillis)
+                }
+                setOnErrorListener { _, _, _ ->
+                    onNetworkError()
+                    true
+                }
+                prepareAsync()
+            }
+            mediaPlayer = newPlayer
+            Triple(title, artist, coverUrl)
+        } catch (e: Exception) {
+            onNetworkError()
+            null
+        }
+    }
+
+    fun playSnippet(durationMillis: Long) {
+        mediaPlayer?.let { player ->
+            handler.removeCallbacksAndMessages(null)
+            player.seekTo(0)
+            player.start()
+            handler.postDelayed({
+                if (player.isPlaying) player.pause()
+            }, durationMillis)
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Implementacja logiki rozgrywki (GameViewModel.kt)}
+
+\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano zarówno predefiniowaną listę najpopularniejszych playlist Deezer (\texttt{availablePlaylists}), jak i logikę weryfikacji odpowiedzi gracza (\texttt{checkAnswer}) wraz z dynamicznym wydłużaniem czasu odsłuchu kolejnych prób[cite: 10]:
+
+\begin{lstlisting}[language=Kotlin, caption={Kluczowe metody logiki rozgrywki w klasie GameViewModel.kt}, label={lst:game_viewmodel_real}]
+class GameViewModel : ViewModel() {
+    var score by mutableStateOf(0)
+        private set
+    var currentRound by mutableStateOf(1)
+        private set
+    val totalRounds = 5
+    var attemptsLeft by mutableStateOf(6)
+        private set
+    val incorrectGuesses = mutableStateListOf<String>()
+
+    val availablePlaylists = listOf(
+        DeezerPlaylist(5123717724, "Hity lat 2000+", "Najwieksze przeboje XXI wieku"),
+        DeezerPlaylist(3227703762, "Rock Classics", "Ponadczasowe hymny rockowe"),
+        DeezerPlaylist(1115594221, "Pop Top", "Swieze hity popowe"),
+        DeezerPlaylist(1963962142, "Polski Rap", "Najlepsze kawalki PL rap"),
+        DeezerPlaylist(1447230235, "Top 50", "Obecnie na czasie")
+    )
+
+    private val attemptDurations = listOf(200L, 1000L, 3000L, 6000L, 15000L)
+
+    fun checkAnswer(musicPlayer: MusicPlayer) {
+        if (isRoundOver || attemptsLeft <= 0) return
+        val currentGuess = userGuess.trim()
+        if (currentGuess.isEmpty()) return
+
+        if (currentGuess.equals(correctTitle.trim(), ignoreCase = true)) {
+            score += 1
+            isAnswerCorrect = true
+            isRoundOver = true
+            musicPlayer.stop()
+            message = "Brawo! Poprawna odpowiedz."
+        } else {
+            attemptsLeft -= 1
+            incorrectGuesses.add(currentGuess)
+            if (incorrectGuesses.size > 5) incorrectGuesses.removeAt(0)
+            userGuess = ""
+
+            if (attemptsLeft > 0) {
+                val attemptIndex = 6 - attemptsLeft
+                val nextDuration = attemptDurations.getOrElse(attemptIndex) { 15000L }
+                musicPlayer.playSnippet(nextDuration)
+            } else {
+                isRoundOver = true
+                musicPlayer.stop()
+                message = "Koniec prob! Prawidlowy tytul to: $correctTitle"
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Implementacja interfejsu rozgrywki (GameScreen.kt)}
+
+\hspace{0.60cm}Ekran rozgrywki w pliku \texttt{GameScreen.kt} dynamicznie dostosowuje wyświetlane komponenty do aktualnego etapu rundy[cite: 9]. Istotnym elementem implementacji jest ograniczenie maksymalnej wysokości karty z podpowiedziami wyszukiwarki za pomocą modyfikatora \texttt{.heightIn(max = 180.dp)} połączonego z pionowym przewijaniem (\texttt{verticalScroll}), co zapobiega rozpychaniu ekranu po wysunięciu klawiatury systemowej[cite: 9].
+
+\begin{lstlisting}[language=Kotlin, caption={Fragment implementacji listy podpowiedzi oraz paska postępu w pliku GameScreen.kt}, label={lst:game_screen_real}]
+// Pasek postepu dlugosci odsluchiwanej probki
+val currentAttemptIndex = 6 - viewModel.attemptsLeft
+val progress = (currentAttemptIndex + 1).toFloat() / 6f
+
+LinearProgressIndicator(
+    progress = { progress },
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(8.dp)
+        .clip(RoundedCornerShape(4.dp)),
+    color = MaterialTheme.colorScheme.primary,
+    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+)
+
+// Przewijana lista podpowiedzi z ograniczona wysokoscia
+if (viewModel.showSuggestions && viewModel.songSuggestions.isNotEmpty()) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 180.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(4.dp)
+        ) {
+            viewModel.songSuggestions.forEach { suggestion ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.selectSuggestion(suggestion, musicPlayer) }
+                        .padding(10.dp)
+                ) {
+                    Text(text = suggestion.title, fontWeight = FontWeight.Bold)
+                    Text(text = suggestion.artist, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+\end{lstlisting}
 
 \subsection{Przebieg zmian i rozwoju aplikacji w ostatnich tygodniach}
 
-\hspace{0.60cm}W trakcie prac nad projektem architektura aplikacji przeszła ewolucję, której celem było zwiększenie stabilności oraz responsywności interfejsu. Główne etapy i zmiany wdrożone w ostatnim okresie obejmują:
+\hspace{0.60cm}W trakcie prac nad projektem architektura aplikacji przeszła szereg iteracyjnych ulepszeń[cite: 5, 7]:
 \begin{enumerate}
-    \item \textbf{Optymalizację zapytań sieciowych:} Wprowadzenie asynchronicznych koprocedur Kotlin (\textit{Coroutines}) w klasie \texttt{MusicPlayer} w celu wyeliminowania zacięć interfejsu podczas pobierania próbek audio i metadanych z API Deezer.
-    \item \textbf{Rozbudowę mechanizmu prób i zgadwania:} Zaimplementowano dynamiczną listę błędnych odpowiedzi (\texttt{incorrectGuesses}) oraz licznik pozostałych prób (\texttt{attemptsLeft}), co zwiększyło atrakcyjność rozgrywki.
-    \item \textbf{Poprawę obsługi błędów sieciowych:} Dodano zabezpieczenia w obsłudze odtwarzacza (\texttt{MediaPlayer}), obsługujące brak dostępu do internetu lub niedostępność konkretnych próbek audio w bazie zewnętrznej.
+    \item \textbf{Optymalizacja zapytań sieciowych i obsługi błędów:} Przeniesiono komunikację z API Deezer do wątków \texttt{Dispatchers.IO} oraz dodano mechanizm bezpiecznego powrotu do menu głównego (\texttt{handleNetworkError}) w przypadku utraty połączenia z internetem[cite: 8, 10].
+    \item \textbf{Wdrożenie mechanizmu etapowego odsłuchu:} Zaimplementowano progresywne wydłużanie próbek audio ($0,2\text{ s} \rightarrow 1\text{ s} \rightarrow 3\text{ s} \rightarrow 6\text{ s} \rightarrow 15\text{ s}$) wraz z dedykowaną funkcją pomijania pojedynczego etapu zamiast odrzucania całego utworu[cite: 7, 10].
+    \item \textbf{Integracja czujnika akcelerometru (\texttt{FlipDetector}):} Dodano obsługę fizycznego lub symulowanego odwrócenia telefonu ekranem do dołu jako alternatywnego sposobu na pominięcie bieżącego etapu zgadywania[cite: 7].
+    \item \textbf{Dopracowanie ergonomii interfejsu (\texttt{GameScreen.kt}):} Ograniczono wysokość listy podpowiedzi, wyrównano wysokość pola tekstowego wyszukiwarki względem przycisku pomijania etapu oraz zaimplementowano dolny pasek nawigacyjny z opcją powrotu do menu i panelu logowania[cite: 7, 9].
 \end{enumerate}
