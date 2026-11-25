@@ -1,41 +1,39 @@
 package com.example.guessthebeat
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.guessthebeat.ui.theme.GuessTheBeatTheme
+import com.example.guessthebeat.ui.theme.NeonBlue
+import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val musicPlayer = MusicPlayer()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             GuessTheBeatTheme {
-                val isDark = isSystemInDarkTheme()
-                val gradientEndColor = if (isDark) Color(0xFF121212) else Color(0xFFE0E0E0)
+                val topColor = Color(0xFF070707)
+                val bottomNeon = NeonBlue.copy(alpha = 0.62f)
 
                 val backgroundGradient = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        gradientEndColor
-                    )
+                    colors = listOf(topColor, bottomNeon)
                 )
 
                 Surface(
@@ -61,6 +59,27 @@ fun MainContainer(
     musicPlayer: MusicPlayer,
     viewModel: GameViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val authRepository = remember { AuthRepository() }
+    val statsRepository = remember { StatsRepository() }
+    val biometricAuthManager = remember(context) { BiometricAuthManager(context) }
+
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var currentUserEmail by remember { mutableStateOf(authRepository.currentUserEmail) }
+    var playerStats by remember { mutableStateOf(PlayerStats()) }
+
+    LaunchedEffect(authRepository.currentUserId) {
+        val uid = authRepository.currentUserId
+        if (uid != null) {
+            runCatching { statsRepository.getStats(uid) }
+                .onSuccess { playerStats = it }
+        } else {
+            playerStats = PlayerStats()
+        }
+    }
+
     Scaffold(
         bottomBar = {
             BottomNavBar(viewModel = viewModel, musicPlayer = musicPlayer)
@@ -70,9 +89,7 @@ fun MainContainer(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // 💡 ZMIANA: Ignorujemy dolny padding z Scaffolda, żeby lista wjeżdżała POD pasek!
                 .padding(top = innerPadding.calculateTopPadding())
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -89,12 +106,130 @@ fun MainContainer(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 ),
-                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
             )
 
             when {
                 viewModel.currentScreen == "login" -> {
-                    LoginScreen()
+                    LoginScreen(
+                        isLoading = isLoading,
+                        errorMessage = errorMessage,
+                        currentUserEmail = currentUserEmail,
+                        isBiometricAvailable = biometricAuthManager.isBiometricAvailable(),
+                        onLogin = { email, password ->
+                            scope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                authRepository.login(email, password)
+                                    .onSuccess {
+                                        biometricAuthManager.saveCredentials(email, password)
+                                        currentUserEmail = authRepository.currentUserEmail
+                                        viewModel.currentScreen = "menu"
+                                    }
+                                    .onFailure { e ->
+                                        val msg = e.localizedMessage ?: e.message ?: "Błąd logowania"
+                                        errorMessage = when {
+                                            msg.contains("CONFIGURATION_NOT_FOUND") ->
+                                                "Błąd konfiguracji Firebase (CONFIGURATION_NOT_FOUND). Wyłącz reCAPTCHA w Firebase Console (Authentication -> Settings -> User actions) lub dodaj plik google-services.json."
+                                            msg.contains("INVALID_LOGIN_CREDENTIALS") || msg.contains("user-not-found") || msg.contains("wrong-password") ->
+                                                "Nieprawidłowy e-mail lub hasło."
+                                            msg.contains("email-already-in-use") ->
+                                                "Konto o podanym adresie e-mail już istnieje."
+                                            else -> msg
+                                        }
+                                    }
+                                isLoading = false
+                            }
+                        },
+                        onRegister = { email, password ->
+                            scope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                authRepository.register(email, password)
+                                    .onSuccess {
+                                        biometricAuthManager.saveCredentials(email, password)
+                                        currentUserEmail = authRepository.currentUserEmail
+                                        viewModel.currentScreen = "menu"
+                                    }
+                                    .onFailure { e ->
+                                        val msg = e.localizedMessage ?: e.message ?: "Błąd rejestracji"
+                                        errorMessage = when {
+                                            msg.contains("CONFIGURATION_NOT_FOUND") ->
+                                                "Błąd konfiguracji Firebase (CONFIGURATION_NOT_FOUND). Wyłącz reCAPTCHA w Firebase Console (Authentication -> Settings -> User actions) lub dodaj plik google-services.json."
+                                            msg.contains("email-already-in-use") ->
+                                                "Konto o podanym adresie e-mail już istnieje."
+                                            msg.contains("weak-password") ->
+                                                "Hasło jest zbyt słabe (wymagane min. 6 znaków)."
+                                            else -> msg
+                                        }
+                                    }
+                                isLoading = false
+                            }
+                        },
+                        onGoogleLogin = {
+                            scope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                authRepository.loginWithGoogle(context)
+                                    .onSuccess {
+                                        currentUserEmail = authRepository.currentUserEmail
+                                        viewModel.currentScreen = "menu"
+                                    }
+                                    .onFailure { e ->
+                                        errorMessage = e.localizedMessage ?: e.message ?: "Błąd logowania Google"
+                                    }
+                                isLoading = false
+                            }
+                        },
+                        onBiometricLogin = {
+                            val activity = context.findFragmentActivity()
+                            if (activity == null) {
+                                errorMessage = "Brak okna dla logowania biometrycznego."
+                            } else {
+                                errorMessage = null
+                                biometricAuthManager.showBiometricPrompt(
+                                    activity = activity,
+                                    onSuccess = {
+                                        scope.launch {
+                                            isLoading = true
+                                            if (authRepository.currentUserEmail != null) {
+                                                currentUserEmail = authRepository.currentUserEmail
+                                                viewModel.currentScreen = "menu"
+                                            } else {
+                                                val saved = biometricAuthManager.getSavedCredentials()
+                                                if (saved != null) {
+                                                    authRepository.login(saved.first, saved.second)
+                                                        .onSuccess {
+                                                            currentUserEmail = authRepository.currentUserEmail
+                                                            viewModel.currentScreen = "menu"
+                                                        }
+                                                        .onFailure { e ->
+                                                            errorMessage = "Błąd automatycznego logowania: ${e.localizedMessage}"
+                                                        }
+                                                } else {
+                                                    errorMessage = "Zaloguj się najpierw e-mailem i hasłem, aby aktywować biometrię."
+                                                }
+                                            }
+                                            isLoading = false
+                                        }
+                                    },
+                                    onError = { err ->
+                                        errorMessage = err
+                                    }
+                                )
+                            }
+                        },
+                        onLogout = {
+                            authRepository.logout()
+                            currentUserEmail = null
+                            playerStats = PlayerStats()
+                            errorMessage = null
+                        },
+                        onBackToMenu = {
+                            errorMessage = null
+                            viewModel.currentScreen = "menu"
+                        }
+                    )
                 }
                 viewModel.selectedPlaylist == null -> {
                     MainMenuScreen(viewModel = viewModel, musicPlayer = musicPlayer)

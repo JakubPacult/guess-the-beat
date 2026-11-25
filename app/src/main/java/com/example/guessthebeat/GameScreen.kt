@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +52,7 @@ fun GameScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -85,6 +87,24 @@ fun GameScreen(
         }
         // 2. EKRAN PRZED STARTEM ROZGRYWKI (po wybraniu playlisty)
         else if (!viewModel.isSongLoaded) {
+            val coverUrl = viewModel.selectedPlaylist?.imageUrl ?: ""
+            if (coverUrl.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.size(150.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    AsyncImage(
+                        model = coverUrl,
+                        contentDescription = "Okładka",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
             Text(
                 text = "Wybrano playlistę:\n${viewModel.selectedPlaylist?.name}",
                 style = MaterialTheme.typography.titleLarge,
@@ -99,9 +119,25 @@ fun GameScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
                     .height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                enabled = !viewModel.isLoadingSong
             ) {
-                Text(text = "Rozpocznij Grę", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                if (viewModel.isLoadingSong) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text(text = "Rozpocznij Grę", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (viewModel.message.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = viewModel.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
