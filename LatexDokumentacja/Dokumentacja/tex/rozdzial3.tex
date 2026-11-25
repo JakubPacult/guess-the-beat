@@ -1,25 +1,28 @@
 \section{Projektowanie}		%3
 
-\hspace{0.60cm}Rozdział niniejszy opisuje proces projektowania architektury aplikacji mobilnej „Guess the Beat”, dobrane narzędzia programistyczne, kluczowe biblioteki języka Kotlin, obsługę sensorów urządzenia, schematy działania najważniejszych algorytmów odpowiedzialnych za przebieg rozgrywki oraz szczegółową integrację z zewnętrznym interfejsem programistycznym (API).
+\hspace{0.60cm}Rozdział niniejszy opisuje proces projektowania architektury aplikacji mobilnej „Guess the Beat”, dobrane narzędzia programistyczne, kluczowe biblioteki języka Kotlin, obsługę sensorów urządzenia, integrację z usługami chmurowymi Firebase, schematy działania najważniejszych algorytmów odpowiedzialnych za przebieg rozgrywki oraz komunikację z zewnętrznym interfejsem programistycznym (API).
 
 \subsection{Narzędzia programistyczne i kontrola wersji}
 
 \hspace{0.60cm}Prace nad projektem realizowano z wykorzystaniem następującego oprogramowania:
 \begin{itemize}
-    \item \textbf{Android Studio:} Oficjalne zintegrowane środowisko programistyczne (IDE) dla systemu Android, zapewniające zaawansowane wsparcie dla języka Kotlin, wbudowany emulator (z możliwością symulacji czujników ruchu) oraz narzędzia do projektowania interfejsu w technologii Jetpack Compose.
+    \item \textbf{Android Studio:} Oficjalne zintegrowane środowisko programistyczne (IDE) dla systemu Android, zapewniające zaawansowane wsparcie dla języka Kotlin, wbudowany emulator (z możliwością symulacji czujników ruchu oraz czytnika linii papilarnych) oraz narzędzia do projektowania interfejsu w technologii Jetpack Compose.
     \item \textbf{Git oraz GitHub:} System kontroli wersji służący do śledzenia zmian w kodzie źródłowym, tworzenia gałęzi (\textit{branches}) oraz wspólnej pracy zespołowej nad projektem.
+    \item \textbf{Konsola Firebase (Google Firebase Console):} Platforma chmurowa wykorzystywana do zarządzania kontami użytkowników, konfiguracji dostawców tożsamości (e-mail/hasło oraz Google OAuth 2.0) oraz administracji nierelacyjną bazą danych Cloud Firestore.
 \end{itemize}
 
 \subsection{Wybór bibliotek i architektura komunikacji wewnątrz aplikacji}
 
-\hspace{0.60cm}Aplikacja została zaprojektowana w architekturze jednowidokowej (\textit{Single-Activity Architecture}) opartej na klasie \texttt{MainActivity}, w której nawigacja między ekranami realizowana jest reaktywnie na podstawie stanu przechowywanego w komponencie \texttt{GameViewModel}. W projekcie wykorzystano następujące biblioteki i komponenty systemowe:
+\hspace{0.60cm}Aplikacja została zaprojektowana w architekturze jednowidokowej (\textit{Single-Activity Architecture}) opartej na klasie \texttt{MainActivity} (dziedziczącej po \texttt{FragmentActivity} w celu wsparcia okien dialogowych biometrii), w której nawigacja między ekranami realizowana jest reaktywnie na podstawie stanu przechowywanego w komponencie \texttt{GameViewModel}. W projekcie wykorzystano następujące biblioteki i komponenty systemowe:
 
 \begin{itemize}
-    \item \textbf{Jetpack Compose (Material 3):} Nowoczesny, deklaratywny zestaw narzędzi do budowy natywnego interfejsu użytkownika. Zastosowano m.in. komponenty \texttt{OutlinedTextField}, \texttt{LinearProgressIndicator}, \texttt{Card} oraz gradientowe tła (\texttt{Brush.verticalGradient}) dostosowujące się automatycznie do jasnego lub ciemnego motywu systemu (\texttt{isSystemInDarkTheme}).
+    \item \textbf{Jetpack Compose (Material 3):} Nowoczesny, deklaratywny zestaw narzędzi do budowy natywnego interfejsu użytkownika. Zastosowano m.in. komponenty \texttt{Scaffold} z dolnym paskiem nawigacyjnym (\texttt{BottomNavBar}), \texttt{OutlinedTextField}, \texttt{LinearProgressIndicator}, \texttt{Card} oraz gradientowe tła (\texttt{Brush.verticalGradient}) wykorzystujące akcenty kolorystyczne motywu (\texttt{NeonBlue}).
+    \item \textbf{Firebase Authentication oraz Cloud Firestore:} Zestaw bibliotek chmurowych Google służący do bezpiecznego uwierzytelniania użytkowników oraz trwałego przechowywania w chmurze ich indywidualnych statystyk (liczby rozegranych gier, odgadniętych i pominiętych utworów, sumy punktów oraz rekordu życiowego).
+    \item \textbf{Android Credential Manager oraz Google Identity Services:} Nowoczesne API systemu Android (\texttt{androidx.credentials}) zapewniające natywną obsługę logowania za pomocą konta Google (\texttt{GetGoogleIdOption}) bez konieczności opuszczania ekranu aplikacji.
+    \item \textbf{AndroidX Biometric (\texttt{BiometricPrompt}):} Biblioteka systemowa umożliwiająca weryfikację tożsamości użytkownika za pomocą czujników biometrycznych urządzenia (odcisk palca, skan twarzy) lub kodu blokady ekranu (\texttt{DEVICE\_CREDENTIAL}).
     \item \textbf{\texttt{MediaPlayer} oraz \texttt{Handler}:} Wbudowana klasa systemowa odpowiedzialna za strumieniowanie próbek audio z internetu (\texttt{prepareAsync}). Do precyzyjnego zatrzymywania dźwięku po upływie zadanego czasu etapu wykorzystano klasę \texttt{Handler} powiązaną z główną pętlą komunikatów (\texttt{Looper.getMainLooper()}) oraz metodą \texttt{postDelayed}.
-    \item \textbf{\texttt{Kotlin Coroutines} (\texttt{Dispatchers.IO}):} Mechanizm współprogramów wykorzystywany do wykonywania zapytań sieciowych HTTP w wątkach roboczych wejścia/wyjścia, co zapobiega blokowaniu głównego wątku interfejsu użytkownika (\textit{UI Thread}) i eliminuje ryzyko wystąpienia błędu ANR (\textit{Application Not Responding}).
-    \item \textbf{Biblioteka Coil (\texttt{AsyncImage}):} Asynchroniczna biblioteka do ładowania i buforowania grafik z sieci, wykorzystywana do wyświetlania okładek albumów muzycznych na ekranie podsumowania rundy.
-    \item \textbf{\texttt{org.json.JSONObject}:} Natywny parser formatu JSON służący do deserializacji odpowiedzi zwracanych przez serwery zewnętrznego API.
+    \item \textbf{\texttt{Kotlin Coroutines} (\texttt{Dispatchers.IO}) oraz \texttt{kotlinx-coroutines-tasks}:} Mechanizm współprogramów wykorzystywany do wykonywania zapytań sieciowych HTTP oraz asynchronicznych operacji Firebase (\texttt{.await()}) bez blokowania głównego wątku interfejsu użytkownika (\textit{UI Thread}).
+    \item \textbf{Biblioteka Coil (\texttt{AsyncImage}):} Asynchroniczna biblioteka do ładowania i buforowania grafik z sieci, wykorzystywana do wyświetlania okładek albumów, playlist oraz zdjęć profilowych artystów.
     \item \textbf{\texttt{SensorManager} oraz \texttt{Sensor.TYPE\_ACCELEROMETER}:} Komponenty frameworka Android służące do nasłuchiwania zmian przyspieszenia urządzenia w trzech osiach ($X, Y, Z$) w celu wykrywania gestu odwrócenia telefonu.
 \end{itemize}
 
@@ -29,16 +32,19 @@
 
 \subsubsection{Przepływ danych i endpointy sieciowe}
 
-\hspace{0.60cm}Klasa \texttt{MusicPlayer} komunikuje się z czterema głównymi punktami końcowymi (ang. \textit{endpoints}) interfejsu Deezer API, co przedstawia poniższy listing:
+\hspace{0.60cm}Klasa \texttt{MusicPlayer} komunikuje się z punktami końcowymi (ang. \textit{endpoints}) interfejsu Deezer API umożliwiającymi nie tylko wyszukiwanie playlist i utworów, ale również pobieranie aktualnych list przebojów (\textit{Charts}) dla topowych playlist, artystów oraz albumów, co przedstawia poniższy listing:
 
 \begin{lstlisting}[caption={Wykorzystywane endpointy publicznego interfejsu Deezer API}, label={lst:deezer_endpoints}]
 GET https://api.deezer.com/search/playlist?q={encodedQuery}
 GET https://api.deezer.com/search?q={encodedQuery}&limit=5
 GET https://api.deezer.com/playlist/{playlistId}
 GET https://api.deezer.com/track/{trackId}?ts={timestamp}
+GET https://api.deezer.com/chart/0/playlists
+GET https://api.deezer.com/chart/0/artists
+GET https://api.deezer.com/chart/0/albums
 \end{lstlisting}
 
-\hspace{0.60cm}Przedstawione na Listingu~\ref{lst:deezer_endpoints} zapytania HTTP realizują pełny cykl pobierania danych muzycznych w aplikacji. Pierwszy endpoint odpowiada za wyszukiwanie list odtwarzania na podstawie frazy wpisanej przez gracza w menu głównym, drugi zwraca maksymalnie pięć dynamicznych podpowiedzi utworów w trakcie wpisywania odpowiedzi, trzeci pobiera pełną pulę identyfikatorów piosenek z wybranej playlisty, natomiast czwarty zwraca szczegółowe metadane oraz adres strumienia MP3 dla wylosowanego utworu.
+\hspace{0.60cm}Przedstawione na Listingu~\ref{lst:deezer_endpoints} zapytania HTTP realizują pełny cykl pobierania danych muzycznych w aplikacji. Pierwsze cztery endpointy odpowiadają za wyszukiwanie list odtwarzania, dynamiczne podpowiedzi utworów w trakcie wpisywania odpowiedzi, pobieranie identyfikatorów piosenek oraz metadanych konkretnego utworu. Trzy ostatnie punkty końcowe (\texttt{/chart/0/...}) służą do automatycznego zasilania menu głównego aktualnymi rankingami najpopularniejszych playlist, wykonawców i albumów.
 
 \hspace{0.60cm}W celu ominięcia problemów z nieaktualną pamięcią podręczną (cache) po stronie serwera lub sieci, do zapytania o szczegóły konkretnego utworu dołączany jest dynamiczny parametr znacznika czasu (\texttt{ts=System.currentTimeMillis()}). Z odpowiedzi JSON dla obiektu \texttt{track} aplikacja wyodrębnia następujące pola:
 \begin{itemize}
@@ -47,12 +53,25 @@ GET https://api.deezer.com/track/{trackId}?ts={timestamp}
     \item \textbf{\texttt{album.cover\_medium}:} Adres URL okładki albumu o średniej rozdzielczości, przekazywany do komponentu \texttt{AsyncImage}.
 \end{itemize}
 
+\subsection{Projekt uwierzytelniania i bazy danych w chmurze (Firebase)}
+
+\hspace{0.60cm}W celu umożliwienia graczom zapisywania swoich postępów między sesjami, aplikacja została zintegrowana z usługami \textbf{Firebase Authentication} oraz \textbf{Cloud Firestore}. Architektura warstwy danych zakłada trzy niezależne metody logowania:
+\begin{itemize}
+    \item \textbf{Klasyczne logowanie i rejestracja (E-mail i Hasło):} Realizowane za pomocą metod \texttt{signInWithEmailAndPassword} oraz \texttt{createUserWithEmailAndPassword} z walidacją minimalnej długości hasła ($6$ znaków).
+    \item \textbf{Logowanie jednym kliknięciem przez konto Google:} Wykorzystuje nowoczesny mechanizm \texttt{CredentialManager} do pozyskania tokenu tożsamości (\texttt{GoogleIdTokenCredential}), który następnie wymieniany jest na poświadczenie sesji Firebase (\texttt{GoogleAuthProvider}).
+    \item \textbf{Logowanie biometryczne (\texttt{BiometricAuthManager}):} Po pierwszym poprawnym zalogowaniu się adresem e-mail i hasłem, dane uwierzytelniające są zapisywane w prywatnej pamięci \texttt{SharedPreferences}. Przy kolejnych uruchomieniach aplikacji gracz może potwierdzić swoją tożsamość odciskiem palca lub skanem twarzy, co wyzwala automatyczne logowanie w tle.
+\end{itemize}
+
+\hspace{0.60cm}Statystyki każdego zarejestrowanego gracza przechowywane są w bazie dokumentowej Cloud Firestore w kolekcji \texttt{users}, pod dokumentem identyfikowanym przez unikalny identyfikator użytkownika (\texttt{uid}). Struktura dokumentu odwzorowuje klasę danych \texttt{PlayerStats} przechowującą pola: \texttt{gamesPlayed}, \texttt{songsGuessed}, \texttt{songsMissed}, \texttt{totalPoints} oraz \texttt{bestScore}.
+
 \subsection{Opis kluczowych algorytmów aplikacji}
 
 \hspace{0.60cm}Działanie rozgrywki opiera się na kilku dedykowanych algorytmach zaimplementowanych w warstwie logiki biznesowej:
 
 \begin{enumerate}
-    \item \textbf{Algorytm losowania utworów i walidacji dostępności audio:} Po pobraniu listy identyfikatorów z wybranej playlisty, system losuje utwór za pomocą metody \texttt{playlistTrackIds.random()}. Ze względu na ograniczenia licencyjne Deezer API, część utworów zwraca pusty ciąg znaków w polu \texttt{preview}. W takiej sytuacji algorytm automatycznie usuwa nieaktywny identyfikator z bieżącej puli sesji (\texttt{mutableIds.remove(currentTrackId)}) i rekurencyjnie ponawia losowanie kolejnego utworu, gwarantując płynność rozgrywki bez zawieszania ekranu.
+    \item \textbf{Algorytm losowania puli rundowej i walidacji dostępności audio:} Po pobraniu listy identyfikatorów z wybranej playlisty, albumu lub dyskografii artysty, system weryfikuje, czy lista zawiera co najmniej $5$ utworów, a następnie losuje unikalną pulę pięciu piosenek na całą sesję (\texttt{ids.shuffled().take(totalRounds)}). Ze względu na ograniczenia licencyjne Deezer API, część utworów zwraca pusty ciąg znaków w polu \texttt{preview}. W takiej sytuacji algorytm automatycznie wybiera utwór zastępczy spoza bieżącej puli sesji (\texttt{availableReplacements.random()}) i rekurencyjnie ponawia ładowanie, gwarantując płynność rozgrywki bez zawieszania ekranu.
     
-    \item \textbf{Algorytm progresywnego wydłużania czasu odsłuchu:} Każda runda składa się z maksymalnie sześciu prób, którym przypisano rosnące przedziały czasowe odtwarzania próbki ($0,2\text{ s}$, $1\text{ s}$, $3\text{ s}$, $6\text{ s}$ oraz $15\text{ s}$). Każde błędne wpisanie tytułu lub użycie przycisku pominięcia przesuwa wskaźnik na kolejny próg czasowy, ułatwiając graczowi identyfikację utworu.
+    \item \textbf{Algorytm progresywnego wydłużania czasu odsłuchu i punktacji malejącej:} Każda runda składa się z sześciu prób, którym przypisano rosnące przedziały czasowe odtwarzania próbki ($0,2\text{ s}$, $1\text{ s}$, $3\text{ s}$, $6\text{ s}$, $10\text{ s}$ oraz $15\text{ s}$) oraz malejącą pulę punktów możliwych do zdobycia (odpowiednio: $5000$, $4000$, $3000$, $2000$, $1000$ oraz $500$ punktów, co daje maksymalnie $25\,000$ punktów w pięciorundowej sesji). Każda błędna odpowiedź lub pominięcie próby wydłuża odsłuch kosztem niższej nagrody punktowej.
+    
+    \item \textbf{Algorytm detekcji obrotu telefonu z histerezą i blokadą czasową:} Moduł \texttt{FlipDetector} monitoruje składową przyspieszenia wzdłuż osi $Z$ akcelerometru. Wykrycie odwrócenia smartfona ekranem do dołu następuje po przekroczeniu progu $Z < -4,0\text{ m/s}^2$, pod warunkiem upływu minimum $1000\text{ ms}$ od poprzedniego zdarzenia. Ponowne wyzwolenie akcji jest blokowane flagą stanu (\texttt{isFaceDown}) aż do momentu przywrócenia telefonu do pozycji bazowej ($Z > 3,0\text{ m/s}^2$), co całkowicie eliminuje przypadkowe wielokrotne pominięcia etapów.
 \end{enumerate}

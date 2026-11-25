@@ -11,21 +11,24 @@
 \contentsline {section}{\numberline {3}Projektowanie}{10}{section.3}%
 \contentsline {subsection}{\numberline {3.1}Narzędzia programistyczne i kontrola wersji}{10}{subsection.3.1}%
 \contentsline {subsection}{\numberline {3.2}Wybór bibliotek i architektura komunikacji wewnątrz aplikacji}{10}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Projekt integracji z zewnętrznym API (Deezer)}{11}{subsection.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.1}Przepływ danych i endpointy sieciowe}{11}{subsubsection.3.3.1}%
-\contentsline {subsection}{\numberline {3.4}Opis kluczowych algorytmów aplikacji}{12}{subsection.3.4}%
-\contentsline {section}{\numberline {4}Implementacja}{13}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Struktura plików źródłowych i ich odpowiedzialność}{13}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Dziedziczenie i reaktywne zarządzanie stanem}{13}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}Główna aktywność i nawigacja reaktywna (MainActivity.kt)}{14}{subsection.4.3}%
-\contentsline {subsection}{\numberline {4.4}Implementacja menu głównego i wyszukiwarki (MainMenuScreen.kt)}{16}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}Implementacja warstwy sieciowej i audio (DeezerAPI.kt)}{18}{subsection.4.5}%
-\contentsline {subsection}{\numberline {4.6}Implementacja logiki rozgrywki (GameViewModel.kt)}{20}{subsection.4.6}%
-\contentsline {subsection}{\numberline {4.7}Implementacja interfejsu rozgrywki (GameScreen.kt)}{22}{subsection.4.7}%
-\contentsline {subsection}{\numberline {4.8}Przebieg zmian i rozwoju aplikacji w ostatnich tygodniach}{23}{subsection.4.8}%
-\contentsline {section}{\numberline {5}Testowanie}{25}{section.5}%
-\contentsline {section}{\numberline {6}Podręcznik użytkownika}{26}{section.6}%
-\contentsline {section}{Literatura}{27}{section.6}%
-\contentsline {section}{Spis rysunków}{27}{section.6}%
-\contentsline {section}{Spis tabel}{28}{section.6}%
-\contentsline {section}{Spis listingów}{29}{section.6}%
+\contentsline {subsection}{\numberline {3.3}Projekt integracji z zewnętrznym API (Deezer)}{12}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Przepływ danych i endpointy sieciowe}{12}{subsubsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.4}Projekt uwierzytelniania i bazy danych w chmurze (Firebase)}{13}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Opis kluczowych algorytmów aplikacji}{13}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Implementacja}{14}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Struktura plików źródłowych i ich odpowiedzialność}{14}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Dziedziczenie i reaktywne zarządzanie stanem}{16}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Główna aktywność i nawigacja reaktywna (MainActivity.kt)}{16}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Implementacja repozytoriów Firebase i logowania Google (FirebaseRepositories.kt)}{21}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Implementacja modułów sprzętowych: biometria i akcelerometr}{24}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Implementacja menu głównego i ekranu logowania}{28}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}Implementacja warstwy sieciowej i audio (DeezerAPI.kt)}{33}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}Implementacja logiki rozgrywki i punktacji (GameViewModel.kt)}{35}{subsection.4.8}%
+\contentsline {subsection}{\numberline {4.9}Implementacja interfejsu rozgrywki (GameScreen.kt)}{38}{subsection.4.9}%
+\contentsline {subsection}{\numberline {4.10}Przebieg zmian i rozwoju aplikacji w ostatnich tygodniach}{40}{subsection.4.10}%
+\contentsline {section}{\numberline {5}Testowanie}{41}{section.5}%
+\contentsline {section}{\numberline {6}Podręcznik użytkownika}{42}{section.6}%
+\contentsline {section}{Literatura}{43}{section.6}%
+\contentsline {section}{Spis rysunków}{43}{section.6}%
+\contentsline {section}{Spis tabel}{44}{section.6}%
+\contentsline {section}{Spis listingów}{45}{section.6}%

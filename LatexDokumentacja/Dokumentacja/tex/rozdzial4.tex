@@ -1,48 +1,49 @@
 \section{Implementacja}		%4
 
-\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat”. Omówiono w nim strukturę pakietu \texttt{com.example.guessthebeat}, zastosowane dziedziczenie, autentyczne fragmenty kodu źródłowego wszystkich kluczowych klas i widoków oraz przebieg zmian wdrożonych w trakcie prac projektowych.
+\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat”. Omówiono w nim strukturę pakietu \texttt{com.example.guessthebeat}, zastosowane dziedziczenie, autentyczne fragmenty kodu źródłowego wszystkich kluczowych klas, repozytoriów chmurowych, modułów sprzętowych i widoków oraz przebieg zmian wdrożonych w trakcie prac projektowych.
 
 \subsection{Struktura plików źródłowych i ich odpowiedzialność}
 
-\hspace{0.60cm}Kod źródłowy projektu został podzielony na wyspecjalizowane pliki zgodne z architekturą MVVM (Model-View-ViewModel):
+\hspace{0.60cm}Kod źródłowy projektu został podzielony na wyspecjalizowane pakiety i pliki zgodne z architekturą MVVM (Model-View-ViewModel):
 \begin{itemize}
-    \item \textbf{\texttt{MainActivity.kt}} – punkt wejścia aplikacji. Inicjalizuje instancję klasy \texttt{MusicPlayer}, konfiguruje motyw graficzny (\texttt{GuessTheBeatTheme}) z tłem gradientowym oraz zarządza cyklem życia odtwarzacza w metodzie \texttt{onPause()}.
-    \item \textbf{\texttt{GameViewModel.kt}} – główny kontroler stanu aplikacji. Przechowuje aktualny wynik, numer rundy, listę predefiniowanych playlist, historię błędnych odpowiedzi oraz zarządza komunikacją między interfejsem a warstwą sieciową.
-    \item \textbf{\texttt{DeezerAPI.kt}} – warstwa sieciowa i multimedialna. Zawiera model danych \texttt{SongSuggestion} oraz klasę \texttt{MusicPlayer}, odpowiedzialną za zapytania HTTP do API Deezer i sterowanie obiektem \texttt{MediaPlayer}.
-    \item \textbf{\texttt{MainMenuScreen.kt}} – deklaratywny widok menu głównego, zawierający wyszukiwarkę playlist w bazie Deezer oraz listę polecanych kategorii muzycznych.
-    \item \textbf{\texttt{GameScreen.kt}} – deklaratywny widok rozgrywki, obsługujący trzy stany ekranu: oczekiwanie na start, właściwą rozgrywkę z paskiem postępu i listą podpowiedzi oraz kartę podsumowania końcowego.
-    \item \textbf{\texttt{FlipDetector.kt}} – moduł sprzętowy implementujący interfejs \texttt{SensorEventListener}, odpowiedzialny za detekcję obrotu smartfona ekranem do dołu za pomocą akcelerometru.
+    \item \textbf{\texttt{MainActivity.kt}} – punkt wejścia aplikacji. Dziedziczy po \texttt{FragmentActivity}, konfiguruje ciemny motyw z neonowym gradientem (\texttt{NeonBlue}), zarządza cyklem życia odtwarzacza audio oraz spina nawigację między ekranami za pomocą komponentu \texttt{Scaffold}.
+    \item \textbf{\texttt{viewmodel/GameViewModel.kt}} – główny kontroler stanu aplikacji. Przechowuje aktualny wynik punktowy, numer rundy, listy przebojów (\textit{Charts}), historię błędnych odpowiedzi, zarządza oknem potwierdzenia wyjścia z gry oraz komunikacją z warstwą sieciową.
+    \item \textbf{\texttt{data/firebase/FirebaseRepositories.kt}} – warstwa integracji z usługami chmurowymi Google. Zawiera model statystyk \texttt{PlayerStats}, klasę \texttt{AuthRepository} (obsługującą logowanie e-mailem, rejestrację oraz logowanie przez konto Google) oraz klasę \texttt{StatsRepository} (zapisującą i odczytującą wyniki gracza w bazie Cloud Firestore).
+    \item \textbf{\texttt{data/remote/DeezerAPI.kt}} – warstwa sieciowa i multimedialna. Zawiera modele danych (\texttt{SongSuggestion}, \texttt{ChartItem}) oraz klasę \texttt{MusicPlayer}, odpowiedzialną za zapytania HTTP do API Deezer i sterowanie obiektem \texttt{MediaPlayer}.
+    \item \textbf{\texttt{sensors/BiometricAuthManager.kt}} – moduł bezpieczeństwa zarządzający dostępnością czujników biometrycznych urządzenia, bezpiecznym przechowywaniem poświadczeń w \texttt{SharedPreferences} oraz wyświetlaniem systemowego okna \texttt{BiometricPrompt}.
+    \item \textbf{\texttt{sensors/FlipDetector.kt}} – moduł sprzętowy implementujący interfejs \texttt{SensorEventListener}, odpowiedzialny za detekcję obrotu smartfona ekranem do dołu za pomocą akcelerometru.
+    \item \textbf{\texttt{ui/screens/MainMenuScreen.kt}} – deklaratywny widok menu głównego, zawierający wyszukiwarkę playlist, polecane kategorie muzyczne oraz karuzele aktualnych list przebojów (\textit{Top Playlisty, Artyści, Albumy}).
+    \item \textbf{\texttt{ui/screens/GameScreen.kt}} – deklaratywny widok rozgrywki, obsługujący stany rundy, pasek postępu prób, listę podpowiedzi, ekran podsumowania sesji oraz dialog potwierdzenia opuszczenia trwającej gry.
+    \item \textbf{\texttt{ui/screens/LoginScreen.kt}} – deklaratywny ekran uwierzytelniania, umożliwiający logowanie, rejestrację konta, logowanie przez Google oraz wywołanie autoryzacji biometrycznej.
+    \item \textbf{\texttt{ui/components/BottomNavBar.kt}} – dolny pasek nawigacyjny umożliwiający przełączanie się między ekranem menu głównego a panelem konta gracza.
 \end{itemize}
 
 \subsection{Dziedziczenie i reaktywne zarządzanie stanem}
 
 \hspace{0.60cm}Architektura systemu opiera się na mechanizmach dziedziczenia dostarczanych przez platformę Android:
 \begin{itemize}
-    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{ComponentActivity}, co umożliwia osadzenie drzewa widoków Jetpack Compose za pomocą funkcji \texttt{setContent}.
-    \item Klasa \texttt{GameViewModel} dziedziczy po \texttt{androidx.lifecycle.ViewModel}. Wykorzystuje delegaty \texttt{mutableStateOf} oraz \texttt{mutableStateListOf}, dzięki czemu każda zmiana wartości zmiennej (np. dodanie błędnego strzału czy zmiana treści komunikatu) automatycznie wyzwala rekompozycję odpowiednich elementów interfejsu.
+    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{FragmentActivity}, co zapewnia pełną kompatybilność zarówno z drzewem widoków Jetpack Compose (\texttt{setContent}), jak i z systemowym kontrolerem okna biometrycznego \texttt{BiometricPrompt}.
+    \item Klasa \texttt{GameViewModel} dziedziczy po \texttt{androidx.lifecycle.ViewModel}. Wykorzystuje delegaty \texttt{mutableStateOf} oraz \texttt{mutableStateListOf}, dzięki czemu każda zmiana wartości zmiennej (np. aktualizacja punktacji, zmiana aktywnego ekranu czy wyświetlenie dialogu wyjścia) automatycznie wyzwala rekompozycję odpowiednich elementów interfejsu.
     \item Klasa \texttt{FlipDetector} implementuje interfejs \texttt{SensorEventListener}, umożliwiając nasłuchiwanie zdarzeń sprzętowych czujnika ruchu.
 \end{itemize}
 
 \subsection{Główna aktywność i nawigacja reaktywna (MainActivity.kt)}
 
-\hspace{0.60cm}W pliku \texttt{MainActivity.kt} zaimplementowano główny kontener widoku (\texttt{MainContainer}). Zamiast tradycyjnego przełączania wielu aktywności za pomocą obiektów \texttt{Intent}, aplikacja dynamicznie podmienia funkcje kompozywalne na podstawie wartości zmiennej \texttt{viewModel.selectedPlaylist}. Dodatkowo funkcja \texttt{isSystemInDarkTheme()} automatycznie dobiera kolorystykę gradientu tła do ustawień systemowych urządzenia.
+\hspace{0.60cm}W pliku \texttt{MainActivity.kt} zaimplementowano główny kontener widoku (\texttt{MainContainer}) oparty na strukturze \texttt{Scaffold} z dolnym paskiem nawigacyjnym \texttt{BottomNavBar}. Zamiast tradycyjnego przełączania wielu aktywności za pomocą obiektów \texttt{Intent}, aplikacja dynamicznie podmienia funkcje kompozywalne na podstawie wartości zmiennych \texttt{viewModel.currentScreen} oraz \texttt{viewModel.selectedPlaylist}, integrując jednocześnie obsługę logowania Firebase i biometrii.
 
 \begin{lstlisting}[language=Kotlin, caption={Implementacja klasy MainActivity oraz głównego kontenera nawigacji w pliku MainActivity.kt}, label={lst:main_activity}]
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val musicPlayer = MusicPlayer()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             GuessTheBeatTheme {
-                val isDark = isSystemInDarkTheme()
-                val gradientEndColor = if (isDark) Color(0xFF121212) else Color(0xFFE0E0E0)
+                val topColor = Color(0xFF070707)
+                val bottomNeon = NeonBlue.copy(alpha = 0.62f)
 
                 val backgroundGradient = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        gradientEndColor
-                    )
+                    colors = listOf(topColor, bottomNeon)
                 )
 
                 Surface(
@@ -68,42 +69,525 @@ fun MainContainer(
     musicPlayer: MusicPlayer,
     viewModel: GameViewModel = viewModel()
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Image(
-            painter = painterResource(id = R.drawable.logo),
-            contentDescription = "Logo",
-            modifier = Modifier.size(140.dp)
-        )
-        Text(
-            text = "GuessTheBeat",
-            style = MaterialTheme.typography.displaySmall.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-        )
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val authRepository = remember { AuthRepository() }
+    val statsRepository = remember { StatsRepository() }
+    val biometricAuthManager = remember(context) { BiometricAuthManager(context) }
 
-        if (viewModel.selectedPlaylist == null) {
-            MainMenuScreen(viewModel = viewModel, musicPlayer = musicPlayer)
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var currentUserEmail by remember { mutableStateOf(authRepository.currentUserEmail) }
+    var playerStats by remember { mutableStateOf(PlayerStats()) }
+
+    LaunchedEffect(authRepository.currentUserId) {
+        val uid = authRepository.currentUserId
+        if (uid != null) {
+            runCatching { statsRepository.getStats(uid) }
+                .onSuccess { playerStats = it }
         } else {
-            GameScreen(musicPlayer = musicPlayer, viewModel = viewModel)
+            playerStats = PlayerStats()
+        }
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(viewModel = viewModel, musicPlayer = musicPlayer)
+        },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Image(
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(120.dp)
+            )
+            Text(
+                text = "GuessTheBeat",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+            )
+
+            when {
+                viewModel.currentScreen == "login" -> {
+                    LoginScreen(
+                        isLoading = isLoading,
+                        errorMessage = errorMessage,
+                        currentUserEmail = currentUserEmail,
+                        isBiometricAvailable = biometricAuthManager.isBiometricAvailable(),
+                        onLogin = { email, password ->
+                            scope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                authRepository.login(email, password)
+                                    .onSuccess {
+                                        biometricAuthManager.saveCredentials(email, password)
+                                        currentUserEmail = authRepository.currentUserEmail
+                                        viewModel.currentScreen = "menu"
+                                    }
+                                    .onFailure { e ->
+                                        errorMessage = e.localizedMessage ?: "Błąd logowania"
+                                    }
+                                isLoading = false
+                            }
+                        },
+                        onRegister = { email, password ->
+                            scope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                authRepository.register(email, password)
+                                    .onSuccess {
+                                        biometricAuthManager.saveCredentials(email, password)
+                                        currentUserEmail = authRepository.currentUserEmail
+                                        viewModel.currentScreen = "menu"
+                                    }
+                                    .onFailure { e ->
+                                        errorMessage = e.localizedMessage ?: "Błąd rejestracji"
+                                    }
+                                isLoading = false
+                            }
+                        },
+                        onGoogleLogin = {
+                            scope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                authRepository.loginWithGoogle(context)
+                                    .onSuccess {
+                                        currentUserEmail = authRepository.currentUserEmail
+                                        viewModel.currentScreen = "menu"
+                                    }
+                                    .onFailure { e ->
+                                        errorMessage = e.localizedMessage ?: "Błąd logowania Google"
+                                    }
+                                isLoading = false
+                            }
+                        },
+                        onBiometricLogin = {
+                            val activity = context.findFragmentActivity()
+                            if (activity != null) {
+                                biometricAuthManager.showBiometricPrompt(
+                                    activity = activity,
+                                    onSuccess = {
+                                        scope.launch {
+                                            val saved = biometricAuthManager.getSavedCredentials()
+                                            if (saved != null) {
+                                                isLoading = true
+                                                authRepository.login(saved.first, saved.second)
+                                                    .onSuccess {
+                                                        currentUserEmail = authRepository.currentUserEmail
+                                                        viewModel.currentScreen = "menu"
+                                                    }
+                                                isLoading = false
+                                            }
+                                        }
+                                    },
+                                    onError = { err -> errorMessage = err }
+                                )
+                            }
+                        },
+                        onLogout = {
+                            authRepository.logout()
+                            currentUserEmail = null
+                            playerStats = PlayerStats()
+                        },
+                        onBackToMenu = {
+                            errorMessage = null
+                            viewModel.currentScreen = "menu"
+                        }
+                    )
+                }
+                viewModel.selectedPlaylist == null -> {
+                    MainMenuScreen(viewModel = viewModel, musicPlayer = musicPlayer)
+                }
+                else -> {
+                    GameScreen(musicPlayer = musicPlayer, viewModel = viewModel)
+                }
+            }
+            Spacer(modifier = Modifier.height(90.dp))
         }
     }
 }
 \end{lstlisting}
 
-\hspace{0.60cm}Powyższy kod (Listing~\ref{lst:main_activity}) inicjalizuje jedną wspólną instancję klasy \texttt{MusicPlayer} oraz osadza drzewo widoków Jetpack Compose w metodzie \texttt{onCreate()}. Nadpisanie metody cyklu życia \texttt{onPause()} gwarantuje natychmiastowe zatrzymanie odtwarzania muzyki po zminimalizowaniu aplikacji lub odebraniu połączenia telefonicznego. Z kolei funkcja \texttt{MainContainer} odpowiada za renderowanie nagłówka z logo oraz automatyczne przełączanie widoku między menu głównym a ekranem gry w zależności od tego, czy użytkownik wybrał już listę odtwarzania (\texttt{viewModel.selectedPlaylist}).
+\hspace{0.60cm}Powyższy kod (Listing~\ref{lst:main_activity}) inicjalizuje wspólną instancję odtwarzacza \texttt{MusicPlayer} oraz repozytoria chmurowe \texttt{AuthRepository} i \texttt{StatsRepository}. Efekt uboczny \texttt{LaunchedEffect(authRepository.currentUserId)} automatycznie pobiera statystyki gracza z bazy Firestore po wykryciu zmiany identyfikatora zalogowanego użytkownika. Wewnątrz kontenera \texttt{Scaffold} instrukcja warunkowa \texttt{when} steruje nawigacją pomiędzy ekranem logowania (\texttt{LoginScreen}), menu głównym (\texttt{MainMenuScreen}) oraz ekranem właściwej rozgrywki (\texttt{GameScreen}), a dolny odstęp $90\text{ dp}$ zapobiega zasłanianiu treści przez pasek nawigacyjny \texttt{BottomNavBar}.
 
-\subsection{Implementacja menu głównego i wyszukiwarki (MainMenuScreen.kt)}
+\subsection{Implementacja repozytoriów Firebase i logowania Google (FirebaseRepositories.kt)}
 
-\hspace{0.60cm}Ekran startowy aplikacji (\texttt{MainMenuScreen}) umożliwia użytkownikowi wybór jednej z predefiniowanych list odtwarzania lub przeszukanie pełnej bazy serwisu Deezer. W trakcie wykonywania zapytania sieciowego przycisk wyszukiwania jest blokowany (\texttt{enabled = !viewModel.isSearching}), a wewnątrz niego wyświetlany jest wskaźnik ładowania \texttt{CircularProgressIndicator}.
+\hspace{0.60cm}Warstwa dostępu do usług chmurowych została wyodrębniona do pliku \texttt{FirebaseRepositories.kt}, w którym zdefiniowano model statystyk \texttt{PlayerStats} oraz dwie wyspecjalizowane klasy repozytoriów: \texttt{AuthRepository} i \texttt{StatsRepository}.
+
+\begin{lstlisting}[language=Kotlin, caption={Implementacja uwierzytelniania Firebase, Google Credential Manager oraz bazy Firestore w pliku FirebaseRepositories.kt}, label={lst:firebase_repositories}]
+data class PlayerStats(
+    val gamesPlayed: Int = 0,
+    val songsGuessed: Int = 0,
+    val songsMissed: Int = 0,
+    val totalPoints: Int = 0,
+    val bestScore: Int = 0
+)
+
+class AuthRepository(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+) {
+    val currentUserEmail: String?
+        get() = auth.currentUser?.email
+
+    val currentUserId: String?
+        get() = auth.currentUser?.uid
+
+    suspend fun login(email: String, password: String): Result<Unit> = runCatching {
+        auth.signInWithEmailAndPassword(email.trim(), password).await()
+    }
+
+    suspend fun register(email: String, password: String): Result<Unit> = runCatching {
+        auth.createUserWithEmailAndPassword(email.trim(), password).await()
+    }
+
+    suspend fun loginWithGoogle(context: Context): Result<Unit> = runCatching {
+        val webClientIdResId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+        val webClientId = if (webClientIdResId != 0) {
+            context.getString(webClientIdResId)
+        } else {
+            "782578499357-fbt5i81u7b3ilf99057j23qb7t68i8p1.apps.googleusercontent.com"
+        }
+
+        val activity = context.findActivity() ?: error("Brak kontekstu Activity dla logowania Google.")
+        val credentialManager = CredentialManager.create(activity)
+
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(webClientId)
+            .setAutoSelectEnabled(false)
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        val result = credentialManager.getCredential(context = activity, request = request)
+        val credential = result.credential
+
+        if (credential is androidx.credentials.CustomCredential &&
+            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+            auth.signInWithCredential(firebaseCredential).await()
+        } else {
+            error("Nieobsługiwany typ poświadczeń Google.")
+        }
+    }
+
+    fun logout() {
+        auth.signOut()
+    }
+}
+
+class StatsRepository(
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+) {
+    suspend fun getStats(uid: String): PlayerStats = runCatching {
+        val snapshot = db.collection("users").document(uid).get().await()
+        snapshot.toObject(PlayerStats::class.java) ?: PlayerStats()
+    }.getOrDefault(PlayerStats())
+
+    suspend fun recordGameResult(
+        uid: String,
+        guessedInSession: Int,
+        missedInSession: Int,
+        sessionScore: Int
+    ): PlayerStats {
+        val current = getStats(uid)
+        val updated = PlayerStats(
+            gamesPlayed = current.gamesPlayed + 1,
+            songsGuessed = current.songsGuessed + guessedInSession,
+            songsMissed = current.songsMissed + missedInSession,
+            totalPoints = current.totalPoints + sessionScore,
+            bestScore = maxOf(current.bestScore, sessionScore)
+        )
+        runCatching {
+            db.collection("users")
+                .document(uid)
+                .set(updated, SetOptions.merge())
+                .await()
+        }
+        return updated
+    }
+}
+\end{lstlisting}
+
+\hspace{0.60cm}Implementacja przedstawiona na Listingu~\ref{lst:firebase_repositories} wykorzystuje blok \texttt{runCatching} oraz funkcję zawieszającą \texttt{.await()} z biblioteki \texttt{kotlinx-coroutines-tasks}, co pozwala na czystą, asynchroniczną obsługę operacji sieciowych bez zagnieżdżonych wywołań zwrotnych. W metodzie \texttt{loginWithGoogle} systemowy \texttt{CredentialManager} pobiera token tożsamości Google (\texttt{GoogleIdTokenCredential}) i przekazuje go do \texttt{FirebaseAuth}. Z kolei klasa \texttt{StatsRepository} w metodzie \texttt{recordGameResult} pobiera dotychczasowy stan dokumentu gracza z kolekcji \texttt{users}, inkrementuje liczniki rozgrywek, wyznacza nowy rekord życiowy (\texttt{maxOf}) i zapisuje zaktualizowany obiekt w bazie Firestore przy użyciu opcji scalania \texttt{SetOptions.merge()}.
+
+\subsection{Implementacja modułów sprzętowych: biometria i akcelerometr}
+
+\hspace{0.60cm}Aplikacja wykorzystuje dwa dedykowane komponenty sprzętowe zlokalizowane w pakiecie \texttt{sensors}: moduł uwierzytelniania biometrycznego \texttt{BiometricAuthManager} oraz detektor obrotu smartfona \texttt{FlipDetector}.
+
+\begin{lstlisting}[language=Kotlin, caption={Implementacja obsługi biometrii w pliku BiometricAuthManager.kt}, label={lst:biometric_manager}]
+class BiometricAuthManager(private val context: Context) {
+
+    private val prefs = context.getSharedPreferences("biometric_prefs", Context.MODE_PRIVATE)
+
+    fun isBiometricAvailable(): Boolean {
+        val biometricManager = BiometricManager.from(context)
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        return biometricManager.canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    fun saveCredentials(email: String, pass: String) {
+        prefs.edit()
+            .putString("bio_email", email.trim())
+            .putString("bio_password", pass)
+            .apply()
+    }
+
+    fun getSavedCredentials(): Pair<String, String>? {
+        val email = prefs.getString("bio_email", null) ?: return null
+        val pass = prefs.getString("bio_password", null) ?: return null
+        return Pair(email, pass)
+    }
+
+    fun showBiometricPrompt(
+        activity: FragmentActivity,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val executor = ContextCompat.getMainExecutor(activity)
+        val biometricPrompt = BiometricPrompt(
+            activity,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onSuccess()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
+                        errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                        onError("Błąd biometrii: $errString")
+                    }
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    onError("Nie rozpoznano biometrii. Spróbuj ponownie.")
+                }
+            }
+        )
+
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Logowanie biometryczne")
+            .setSubtitle("Potwierdź tożsamość za pomocą odcisku palca, twarzy lub kodu blokady")
+            .setAllowedAuthenticators(authenticators)
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+}
+\end{lstlisting}
+
+\hspace{0.60cm}Klasa \texttt{BiometricAuthManager} (Listing~\ref{lst:biometric_manager}) najpierw weryfikuje za pomocą metody \texttt{isBiometricAvailable()}, czy urządzenie posiada skonfigurowany czujnik biometryczny lub blokadę ekranu. Wywołanie \texttt{showBiometricPrompt} otwiera natywne okno systemowe Androida i po pozytywnej weryfikacji tożsamości (\texttt{onAuthenticationSucceeded}) przekazuje sterowanie do funkcji zwrotnej \texttt{onSuccess}, umożliwiając automatyczne odczytanie poświadczeń z \texttt{SharedPreferences} i zalogowanie gracza do Firebase.
+
+\begin{lstlisting}[language=Kotlin, caption={Implementacja detektora obrotu urządzenia w pliku FlipDetector.kt}, label={lst:flip_detector}]
+class FlipDetector(
+    sensorManager: SensorManager,
+    private val onPhoneFlipped: () -> Unit
+) : SensorEventListener {
+
+    private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private var isRegistered = false
+    private var isFaceDown = false
+    private var lastTriggerTime = 0L
+
+    init {
+        if (accelerometer != null) {
+            isRegistered = sensorManager.registerListener(
+                this,
+                accelerometer,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
+    }
+
+    fun unregister(sensorManager: SensorManager) {
+        if (isRegistered) {
+            sensorManager.unregisterListener(this)
+            isRegistered = false
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type != Sensor.TYPE_ACCELEROMETER) return
+
+        val zAxis = event.values[2]
+        val currentTime = System.currentTimeMillis()
+
+        if (zAxis < -4.0f && !isFaceDown) {
+            if (currentTime - lastTriggerTime > 1000L) {
+                isFaceDown = true
+                lastTriggerTime = currentTime
+                onPhoneFlipped()
+            }
+        } else if (zAxis > 3.0f && isFaceDown) {
+            isFaceDown = false
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+}
+\end{lstlisting}
+
+\hspace{0.60cm}Moduł \texttt{FlipDetector} przedstawiony na Listingu~\ref{lst:flip_detector} rejestruje nasłuchiwanie akcelerometru z częstotliwością \texttt{SENSOR\_DELAY\_UI}. W metodzie \texttt{onSensorChanged} analizowana jest wartość składowej $Z$ wektora przyspieszenia ziemskiego: spadek poniżej wartości $-4,0\text{ m/s}^2$ przy jednoczesnym zachowaniu minimum jednosekundowego odstępu czasowego (\texttt{1000L}) wywołuje funkcję \texttt{onPhoneFlipped()}, powodując pominięcie bieżącego etapu zgadywania. Zastosowanie histerezy (odblokowanie flagi \texttt{isFaceDown} dopiero po powrocie osi $Z$ powyżej $+3,0\text{ m/s}^2$) zapobiega drganiom odczytów.
+
+\subsection{Implementacja menu głównego i ekranu logowania}
+
+\hspace{0.60cm}Interfejs użytkownika w warstwie prezentacji został podzielony na wyspecjalizowane ekrany kompozywalne, z których kluczowe znaczenie dla obsługi konta oraz wyboru repertuaru mają \texttt{LoginScreen.kt} oraz \texttt{MainMenuScreen.kt}.
+
+\begin{lstlisting}[language=Kotlin, caption={Implementacja formularza logowania, rejestracji i biometrii w pliku LoginScreen.kt}, label={lst:login_screen}]
+@Composable
+fun LoginScreen(
+    isLoading: Boolean,
+    errorMessage: String?,
+    currentUserEmail: String?,
+    isBiometricAvailable: Boolean,
+    onLogin: (String, String) -> Unit,
+    onRegister: (String, String) -> Unit,
+    onGoogleLogin: () -> Unit,
+    onBiometricLogin: () -> Unit,
+    onLogout: () -> Unit,
+    onBackToMenu: () -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.AccountCircle,
+            contentDescription = "Ikona logowania",
+            modifier = Modifier.size(56.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = if (currentUserEmail != null) "Zalogowano" else "Konto gracza",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (currentUserEmail != null) {
+            Text(text = "Konto: $currentUserEmail")
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onLogout, enabled = !isLoading) {
+                Text("Wyloguj")
+            }
+        } else {
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("E-mail") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Hasło (min. 6 znaków)") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { onLogin(email, password) },
+                enabled = !isLoading && email.isNotBlank() && password.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Zaloguj się")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { onRegister(email, password) },
+                enabled = !isLoading && email.isNotBlank() && password.length >= 6,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Zarejestruj konto")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            ElevatedButton(
+                onClick = onGoogleLogin,
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_google),
+                    contentDescription = "Google",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Zaloguj się przez Google")
+            }
+
+            if (isBiometricAvailable) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onBiometricLogin,
+                    enabled = !isLoading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fingerprint,
+                        contentDescription = "Biometria",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Zaloguj się biometrycznie")
+                }
+            }
+        }
+
+        if (isLoading) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CircularProgressIndicator()
+        }
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        TextButton(onClick = onBackToMenu) {
+            Text("Powrót do menu")
+        }
+    }
+}
+\end{lstlisting}
+
+\hspace{0.60cm}Widok \texttt{LoginScreen} (Listing~\ref{lst:login_screen}) jest całkowicie bezstanowy w zakresie logiki biznesowej (wzorzec \textit{State Hoisting}) – przechowuje jedynie lokalny stan pól formularza (\texttt{email}, \texttt{password}), natomiast wszystkie zdarzenia deleguje do funkcji zwrotnych przekazanych z \texttt{MainContainer}. Pole hasła maskuje wprowadzane znaki za pomocą \texttt{PasswordVisualTransformation()}, przycisk rejestracji aktywuje się dopiero po wpisaniu minimum $6$ znaków, a przycisk logowania biometrycznego jest renderowany warunkowo wyłącznie na urządzeniach wspierających tę technologię (\texttt{isBiometricAvailable}).
 
 \begin{lstlisting}[language=Kotlin, caption={Implementacja wyszukiwarki i listy playlist w pliku MainMenuScreen.kt}, label={lst:main_menu_screen}]
 @Composable
@@ -176,7 +660,7 @@ fun MainMenuScreen(
 }
 \end{lstlisting}
 
-\hspace{0.60cm}Implementacja przedstawiona na Listingu~\ref{lst:main_menu_screen} wykorzystuje pole tekstowe \texttt{OutlinedTextField} z dynamiczną ikoną czyszczenia wpisanej frazy (\texttt{trailingIcon}), która pojawia się wyłącznie wtedy, gdy pole nie jest puste. Poniżej komponentu wyszukiwarki system sprawdza zawartość listy \texttt{searchResults} – jeżeli użytkownik nie wykonał jeszcze własnego zapytania, wyświetlane są domyślne kategorie zdefiniowane w \texttt{availablePlaylists}, a kliknięcie dowolnej karty (\texttt{Card}) natychmiast inicjuje rozgrywkę dla wybranej listy.
+\hspace{0.60cm}Implementacja przedstawiona na Listingu~\ref{lst:main_menu_screen} wykorzystuje pole tekstowe \texttt{OutlinedTextField} z dynamiczną ikoną czyszczenia wpisanej frazy (\texttt{trailingIcon}). Poniżej komponentu wyszukiwarki system sprawdza zawartość listy \texttt{searchResults} – jeżeli użytkownik nie wykonał jeszcze własnego zapytania, wyświetlane są domyślne kategorie zdefiniowane w \texttt{availablePlaylists}, a kliknięcie dowolnej karty (\texttt{Card}) natychmiast inicjuje rozgrywkę dla wybranej listy.
 
 \subsection{Implementacja warstwy sieciowej i audio (DeezerAPI.kt)}
 
@@ -253,11 +737,11 @@ class MusicPlayer {
 
 \hspace{0.60cm}Metoda \texttt{loadAndPlaySong} zaprezentowana na Listingu~\ref{lst:deezer_api_real} wykonuje zapytanie sieciowe w wątku roboczym \texttt{Dispatchers.IO}, co chroni główny wątek aplikacji przed zawieszeniem. Po wyodrębnieniu adresu pliku MP3 z obiektu JSON odtwarzacz jest buforowany asynchronicznie (\texttt{prepareAsync()}), a w momencie rozpoczęcia dźwięku obiekt \texttt{Handler} planuje opóźnione wywołanie funkcji pauzującej (\texttt{postDelayed}) dokładnie po upływie czasu zadanego dla bieżącego etapu. Metoda \texttt{playSnippet} umożliwia ponowne odsłuchanie tego samego fragmentu od początku bez konieczności ponownego pobierania pliku z sieci.
 
-\subsection{Implementacja logiki rozgrywki (GameViewModel.kt)}
+\subsection{Implementacja logiki rozgrywki i punktacji (GameViewModel.kt)}
 
-\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano zarówno predefiniowaną listę najpopularniejszych playlist Deezer (\texttt{availablePlaylists}), jak i logikę weryfikacji odpowiedzi gracza (\texttt{checkAnswer}) wraz z dynamicznym wydłużaniem czasu odsłuchu kolejnych prób:
+\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano zarządzanie pięciorundową sesją gry, system punktacji malejącej zależnej od numeru próby (\texttt{attemptScores}), obsługę pomijania pojedynczego etapu (\texttt{skipCurrentAttempt}) oraz mechanizm bezpiecznego opuszczania trwającej rozgrywki (\texttt{requestExit}).
 
-\begin{lstlisting}[language=Kotlin, caption={Kluczowe metody logiki rozgrywki w klasie GameViewModel.kt}, label={lst:game_viewmodel_real}]
+\begin{lstlisting}[language=Kotlin, caption={Kluczowe metody logiki rozgrywki, punktacji i nawigacji w klasie GameViewModel.kt}, label={lst:game_viewmodel_real}]
 class GameViewModel : ViewModel() {
     var score by mutableStateOf(0)
         private set
@@ -268,27 +752,42 @@ class GameViewModel : ViewModel() {
         private set
     val incorrectGuesses = mutableStateListOf<String>()
 
-    val availablePlaylists = listOf(
-        DeezerPlaylist(5123717724, "Hity lat 2000+", "Najwieksze przeboje XXI wieku"),
-        DeezerPlaylist(3227703762, "Rock Classics", "Ponadczasowe hymny rockowe"),
-        DeezerPlaylist(1115594221, "Pop Top", "Swieze hity popowe"),
-        DeezerPlaylist(1963962142, "Polski Rap", "Najlepsze kawalki PL rap"),
-        DeezerPlaylist(1447230235, "Top 50", "Obecnie na czasie")
-    )
+    private val attemptDurations = listOf(200L, 1000L, 3000L, 6000L, 10000L, 15000L)
+    private val attemptScores = listOf(5000, 4000, 3000, 2000, 1000, 500)
+    val maxScore = 25000
 
-    private val attemptDurations = listOf(200L, 1000L, 3000L, 6000L, 15000L)
+    var showExitConfirmation by mutableStateOf(false)
+        private set
+    private var pendingDestination: String = "menu"
+    var currentScreen by mutableStateOf("menu")
+
+    fun getCurrentSnippetDuration(): Long {
+        val attemptIndex = 6 - attemptsLeft
+        return if (attemptIndex in attemptDurations.indices) {
+            attemptDurations[attemptIndex]
+        } else {
+            15000L
+        }
+    }
 
     fun checkAnswer(musicPlayer: MusicPlayer) {
-        if (isRoundOver || attemptsLeft <= 0) return
+        if (isRoundOver || attemptsLeft <= 0 || isLoadingSong) return
         val currentGuess = userGuess.trim()
         if (currentGuess.isEmpty()) return
 
+        songSuggestions.clear()
+        showSuggestions = false
+
         if (currentGuess.equals(correctTitle.trim(), ignoreCase = true)) {
-            score += 1
+            val attemptIndex = 6 - attemptsLeft
+            val earnedPoints = if (attemptIndex in attemptScores.indices) attemptScores[attemptIndex] else 0
+
+            score += earnedPoints
             isAnswerCorrect = true
             isRoundOver = true
+            isPlaying = false
             musicPlayer.stop()
-            message = "Brawo! Poprawna odpowiedz."
+            message = "Brawo! Poprawna odpowiedź (+${earnedPoints} pkt)."
         } else {
             attemptsLeft -= 1
             incorrectGuesses.add(currentGuess)
@@ -296,27 +795,56 @@ class GameViewModel : ViewModel() {
             userGuess = ""
 
             if (attemptsLeft > 0) {
-                val attemptIndex = 6 - attemptsLeft
-                val nextDuration = attemptDurations.getOrElse(attemptIndex) { 15000L }
+                val nextDuration = getCurrentSnippetDuration()
                 musicPlayer.playSnippet(nextDuration)
             } else {
+                isAnswerCorrect = false
                 isRoundOver = true
+                isPlaying = false
                 musicPlayer.stop()
-                message = "Koniec prob! Prawidlowy tytul to: $correctTitle"
+                message = "Koniec prób! 0 punktów. Prawidłowy tytuł to: $correctTitle"
             }
+        }
+    }
+
+    fun skipCurrentAttempt(musicPlayer: MusicPlayer) {
+        if (isRoundOver || isLoadingSong) return
+        if (attemptsLeft > 1) {
+            attemptsLeft -= 1
+            val nextDuration = getCurrentSnippetDuration()
+            musicPlayer.playSnippet(nextDuration)
+            isPlaying = true
+        } else {
+            skipSong(musicPlayer)
+        }
+    }
+
+    fun requestExit(destination: String) {
+        if (selectedPlaylist != null && !isGameSessionFinished) {
+            pendingDestination = destination
+            showExitConfirmation = true
+        } else {
+            currentScreen = destination
+        }
+    }
+
+    fun confirmExit(musicPlayer: MusicPlayer) {
+        showExitConfirmation = false
+        currentScreen = pendingDestination
+        if (pendingDestination == "menu") {
+            resetPlaylistSelection(musicPlayer)
         }
     }
 }
 \end{lstlisting}
 
-\hspace{0.60cm}Kod na Listingu~\ref{lst:game_viewmodel_real} zarządza stanem rozgrywki w sposób reaktywny. Metoda \texttt{checkAnswer} najpierw oczyszcza tekst wpisany przez gracza ze zbędnych spacji (\texttt{trim()}) i ignoruje puste zatwierdzenia. W przypadku poprawnego odgadnięcia tytułu (bez uwzględniania wielkości liter) zwiększa licznik punktów i kończy rundę; w przeciwnym razie odejmuje jedną szansę, zapisuje błędny typ na liście \texttt{incorrectGuesses} i automatycznie uruchamia dłuższy fragment utworu z tablicy \texttt{attemptDurations}.
+\hspace{0.60cm}Kod na Listingu~\ref{lst:game_viewmodel_real} implementuje system nagradzania gracza za szybkie rozpoznanie utworu: na podstawie indeksu bieżącej próby (\texttt{6 - attemptsLeft}) metoda \texttt{checkAnswer} pobiera z tablicy \texttt{attemptScores} odpowiednią liczbę punktów (od $5000$ pkt w pierwszej próbie do $500$ pkt w szóstej). Metoda \texttt{skipCurrentAttempt} odpowiada zarówno za przycisk pominięcia etapu na ekranie, jak i za gest odwrócenia telefonu wykrywany przez \texttt{FlipDetector}. Dodatkowo metoda \texttt{requestExit} chroni gracza przed przypadkową utratą postępu – jeżeli użytkownik kliknie przycisk na dolnym pasku nawigacyjnym w trakcie aktywnej rozgrywki, system wstrzymuje przejście i wyświetla okno dialogowe potwierdzenia (\texttt{showExitConfirmation = true}).
 
 \subsection{Implementacja interfejsu rozgrywki (GameScreen.kt)}
 
 \hspace{0.60cm}Ekran rozgrywki w pliku \texttt{GameScreen.kt} dynamicznie dostosowuje wyświetlane komponenty do aktualnego etapu rundy. Istotnym elementem implementacji jest ograniczenie maksymalnej wysokości karty z podpowiedziami wyszukiwarki za pomocą modyfikatora \texttt{.heightIn(max = 180.dp)} połączonego z pionowym przewijaniem (\texttt{verticalScroll}), co zapobiega rozpychaniu ekranu po wysunięciu klawiatury systemowej.
 
 \begin{lstlisting}[language=Kotlin, caption={Fragment implementacji listy podpowiedzi oraz paska postępu w pliku GameScreen.kt}, label={lst:game_screen_real}]
-// Pasek postepu dlugosci odsluchiwanej probki
 val currentAttemptIndex = 6 - viewModel.attemptsLeft
 val progress = (currentAttemptIndex + 1).toFloat() / 6f
 
@@ -330,7 +858,6 @@ LinearProgressIndicator(
     trackColor = MaterialTheme.colorScheme.surfaceVariant,
 )
 
-// Przewijana lista podpowiedzi z ograniczona wysokoscia
 if (viewModel.showSuggestions && viewModel.songSuggestions.isNotEmpty()) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -365,8 +892,8 @@ if (viewModel.showSuggestions && viewModel.songSuggestions.isNotEmpty()) {
 
 \hspace{0.60cm}W trakcie prac nad projektem architektura aplikacji przeszła szereg iteracyjnych ulepszeń:
 \begin{enumerate}
-    \item \textbf{Optymalizacja zapytań sieciowych i obsługi błędów:} Przeniesiono komunikację z API Deezer do wątków \texttt{Dispatchers.IO} oraz dodano mechanizm bezpiecznego powrotu do menu głównego (\texttt{handleNetworkError}) w przypadku utraty połączenia z internetem.
-    \item \textbf{Wdrożenie mechanizmu etapowego odsłuchu:} Zaimplementowano progresywne wydłużanie próbek audio ($0,2\text{ s} \rightarrow 1\text{ s} \rightarrow 3\text{ s} \rightarrow 6\text{ s} \rightarrow 15\text{ s}$) wraz z dedykowaną funkcją pomijania pojedynczego etapu zamiast odrzucania całego utworu.
-    \item \textbf{Integracja czujnika akcelerometru (\texttt{FlipDetector}):} Dodano obsługę fizycznego lub symulowanego odwrócenia telefonu ekranem do dołu jako alternatywnego sposobu na pominięcie bieżącego etapu zgadywania.
-    \item \textbf{Dopracowanie ergonomii interfejsu (\texttt{GameScreen.kt}):} Ograniczono wysokość listy podpowiedzi, wyrównano wysokość pola tekstowego wyszukiwarki względem przycisku pomijania etapu oraz zaimplementowano dolny pasek nawigacyjny z opcją powrotu do menu i panelu logowania.
+    \item \textbf{Integracja z usługami Firebase (Auth oraz Cloud Firestore):} Dodano pełną obsługę kont użytkowników (rejestrację i logowanie za pomocą adresu e-mail oraz hasła) oraz trwały zapis statystyk rozgrywki i rekordów punktowych w bazie dokumentowej Firestore.
+    \item \textbf{Wdrożenie logowania Google oraz uwierzytelniania biometrycznego:} Zintegrowano systemowy mechanizm \texttt{CredentialManager} do logowania kontem Google oraz bibliotekę \texttt{BiometricPrompt}, umożliwiającą szybkie logowanie odciskiem palca lub skanem twarzy.
+    \item \textbf{Rozbudowa katalogu muzycznego o listy przebojów (\textit{Charts}) i system punktacji malejącej:} Rozszerzono integrację z Deezer API o automatyczne pobieranie topowych playlist, artystów i albumów, a także wdrożono gradację punktów ($5000$–$500$ pkt) premiującą jak najszybsze rozpoznanie utworu.
+    \item \textbf{Uporządkowanie struktury pakietów i nawigacji:} Podzielono kod na warstwy funkcjonalne (\texttt{data/firebase}, \texttt{data/remote}, \texttt{sensors}, \texttt{ui/screens}, \texttt{ui/components}, \texttt{viewmodel}), wdrożono ciemny motyw z neonowymi akcentami (\texttt{NeonBlue}) oraz dodano okno potwierdzenia wyjścia chroniące przed przypadkowym przerwaniem gry.
 \end{enumerate}
