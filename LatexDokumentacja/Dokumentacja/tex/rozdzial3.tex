@@ -1,55 +1,50 @@
 \section{Projektowanie}		%3
 
-\hspace{0.60cm}Rozdział niniejszy opisuje proces projektowania architektury aplikacji mobilnej „Guess the Beat”, dobrane narzędzia programistyczne, kluczowe biblioteki języka Kotlin, obsługę sensorów urządzenia, schematy działania najważniejszych algorytmów odpowiedzialnych za przebieg rozgrywki oraz szczegółową integrację z zewnętrznym interfejsem programistycznym (API)[cite: 4, 7].
+\hspace{0.60cm}Rozdział niniejszy opisuje proces projektowania architektury aplikacji mobilnej „Guess the Beat”, dobrane narzędzia programistyczne, kluczowe biblioteki języka Kotlin, obsługę sensorów urządzenia, schematy działania najważniejszych algorytmów odpowiedzialnych za przebieg rozgrywki oraz szczegółową integrację z zewnętrznym interfejsem programistycznym (API).
 
 \subsection{Narzędzia programistyczne i kontrola wersji}
 
 \hspace{0.60cm}Prace nad projektem realizowano z wykorzystaniem następującego oprogramowania:
 \begin{itemize}
-    \item \textbf{Android Studio:} Oficjalne zintegrowane środowisko programistyczne (IDE) dla systemu Android, zapewniające zaawansowane wsparcie dla języka Kotlin, wbudowany emulator (z możliwością symulacji czujników ruchu) oraz narzędzia do projektowania interfejsu w technologii Jetpack Compose[cite: 4, 7].
-    \item \textbf{Git oraz GitHub:} System kontroli wersji służący do śledzenia zmian w kodzie źródłowym, tworzenia gałęzi (\textit{branches}) oraz wspólnej pracy zespołowej nad projektem[cite: 4].
+    \item \textbf{Android Studio:} Oficjalne zintegrowane środowisko programistyczne (IDE) dla systemu Android, zapewniające zaawansowane wsparcie dla języka Kotlin, wbudowany emulator (z możliwością symulacji czujników ruchu) oraz narzędzia do projektowania interfejsu w technologii Jetpack Compose.
+    \item \textbf{Git oraz GitHub:} System kontroli wersji służący do śledzenia zmian w kodzie źródłowym, tworzenia gałęzi (\textit{branches}) oraz wspólnej pracy zespołowej nad projektem.
 \end{itemize}
 
 \subsection{Wybór bibliotek i architektura komunikacji wewnątrz aplikacji}
 
-\hspace{0.60cm}Aplikacja została zaprojektowana w architekturze jednowidokowej (\textit{Single-Activity Architecture}) opartej na klasie \texttt{MainActivity}, w której nawigacja między ekranami realizowana jest reaktywnie na podstawie stanu przechowywanego w komponencie \texttt{GameViewModel}[cite: 11]. W projekcie wykorzystano następujące biblioteki i komponenty systemowe:
+\hspace{0.60cm}Aplikacja została zaprojektowana w architekturze jednowidokowej (\textit{Single-Activity Architecture}) opartej na klasie \texttt{MainActivity}, w której nawigacja między ekranami realizowana jest reaktywnie na podstawie stanu przechowywanego w komponencie \texttt{GameViewModel}. W projekcie wykorzystano następujące biblioteki i komponenty systemowe:
 
 \begin{itemize}
-    \item \textbf{Jetpack Compose (Material 3):} Nowoczesny, deklaratywny zestaw narzędzi do budowy natywnego interfejsu użytkownika. Zastosowano m.in. komponenty \texttt{OutlinedTextField}, \texttt{LinearProgressIndicator}, \texttt{Card} oraz gradientowe tła (\texttt{Brush.verticalGradient}) dostosowujące się automatycznie do jasnego lub ciemnego motywu systemu (\texttt{isSystemInDarkTheme})[cite: 9, 11].
-    \item \textbf{\texttt{MediaPlayer} oraz \texttt{Handler}:} Wbudowana klasa systemowa odpowiedzialna za strumieniowanie próbek audio z internetu (\texttt{prepareAsync})[cite: 8]. Do precyzyjnego zatrzymywania dźwięku po upływie zadanego czasu etapu wykorzystano klasę \texttt{Handler} powiązaną z główną pętlą komunikatów (\texttt{Looper.getMainLooper()}) oraz metodą \texttt{postDelayed}[cite: 8].
-    \item \textbf{\texttt{Kotlin Coroutines} (\texttt{Dispatchers.IO}):} Mechanizm współprogramów wykorzystywany do wykonywania zapytań sieciowych HTTP w wątkach roboczych wejścia/wyjścia, co zapobiega blokowaniu głównego wątku interfejsu użytkownika (\textit{UI Thread}) i eliminuje ryzyko wystąpienia błędu ANR (\textit{Application Not Responding})[cite: 4, 8].
-    \item \textbf{Biblioteka Coil (\texttt{AsyncImage}):} Asynchroniczna biblioteka do ładowania i buforowania grafik z sieci, wykorzystywana do wyświetlania okładek albumów muzycznych na ekranie podsumowania rundy[cite: 9].
-    \item \textbf{\texttt{org.json.JSONObject}:} Natywny parser formatu JSON służący do deserializacji odpowiedzi zwracanych przez serwery zewnętrznego API[cite: 8].
-    \item \textbf{\texttt{SensorManager} oraz \texttt{Sensor.TYPE\_ACCELEROMETER}:} Komponenty frameworka Android służące do nasłuchiwania zmian przyspieszenia urządzenia w trzech osiach ($X, Y, Z$) w celu wykrywania gestu odwrócenia telefonu[cite: 7].
+    \item \textbf{Jetpack Compose (Material 3):} Nowoczesny, deklaratywny zestaw narzędzi do budowy natywnego interfejsu użytkownika. Zastosowano m.in. komponenty \texttt{OutlinedTextField}, \texttt{LinearProgressIndicator}, \texttt{Card} oraz gradientowe tła (\texttt{Brush.verticalGradient}) dostosowujące się automatycznie do jasnego lub ciemnego motywu systemu (\texttt{isSystemInDarkTheme}).
+    \item \textbf{\texttt{MediaPlayer} oraz \texttt{Handler}:} Wbudowana klasa systemowa odpowiedzialna za strumieniowanie próbek audio z internetu (\texttt{prepareAsync}). Do precyzyjnego zatrzymywania dźwięku po upływie zadanego czasu etapu wykorzystano klasę \texttt{Handler} powiązaną z główną pętlą komunikatów (\texttt{Looper.getMainLooper()}) oraz metodą \texttt{postDelayed}.
+    \item \textbf{\texttt{Kotlin Coroutines} (\texttt{Dispatchers.IO}):} Mechanizm współprogramów wykorzystywany do wykonywania zapytań sieciowych HTTP w wątkach roboczych wejścia/wyjścia, co zapobiega blokowaniu głównego wątku interfejsu użytkownika (\textit{UI Thread}) i eliminuje ryzyko wystąpienia błędu ANR (\textit{Application Not Responding}).
+    \item \textbf{Biblioteka Coil (\texttt{AsyncImage}):} Asynchroniczna biblioteka do ładowania i buforowania grafik z sieci, wykorzystywana do wyświetlania okładek albumów muzycznych na ekranie podsumowania rundy.
+    \item \textbf{\texttt{org.json.JSONObject}:} Natywny parser formatu JSON służący do deserializacji odpowiedzi zwracanych przez serwery zewnętrznego API.
+    \item \textbf{\texttt{SensorManager} oraz \texttt{Sensor.TYPE\_ACCELEROMETER}:} Komponenty frameworka Android służące do nasłuchiwania zmian przyspieszenia urządzenia w trzech osiach ($X, Y, Z$) w celu wykrywania gestu odwrócenia telefonu.
 \end{itemize}
 
 \subsection{Projekt integracji z zewnętrznym API (Deezer)}
 
-\hspace{0.60cm}Zamiast przechowywać pliki dźwiękowe lokalnie w pamięci urządzenia – co drastycznie zwiększyłoby rozmiar pakietu instalacyjnego APK i ograniczyło pulę utworów – aplikacja została zaprojektowana jako klient publicznego interfejsu \textbf{Deezer API}[cite: 4]. Komunikacja sieciowa opiera się na wywołaniach protokołu HTTPS oraz kodowaniu zapytań w standardzie UTF-8 (\texttt{URLEncoder})[cite: 8].
+\hspace{0.60cm}Zamiast przechowywać pliki dźwiękowe lokalnie w pamięci urządzenia – co drastycznie zwiększyłoby rozmiar pakietu instalacyjnego APK i ograniczyło pulę utworów – aplikacja została zaprojektowana jako klient publicznego interfejsu \textbf{Deezer API}. Komunikacja sieciowa opiera się na wywołaniach protokołu HTTPS oraz kodowaniu zapytań w standardzie UTF-8 (\texttt{URLEncoder}).
 
 \subsubsection{Przepływ danych i endpointy sieciowe}
 
 \hspace{0.60cm}Klasa \texttt{MusicPlayer} komunikuje się z czterema głównymi punktami końcowymi (ang. \textit{endpoints}) interfejsu Deezer API, co przedstawia poniższy listing:
 
 \begin{lstlisting}[caption={Wykorzystywane endpointy publicznego interfejsu Deezer API}, label={lst:deezer_endpoints}]
-// 1. Wyszukiwanie playlist uzytkownika na podstawie frazy
 GET https://api.deezer.com/search/playlist?q={encodedQuery}
-
-// 2. Wyszukiwanie podpowiedzi utworow w trakcie wpisywania odpowiedzi (limit 5)
 GET https://api.deezer.com/search?q={encodedQuery}&limit=5
-
-// 3. Pobranie pelnej listy identyfikatorow utworow z wybranej playlisty
 GET https://api.deezer.com/playlist/{playlistId}
-
-// 4. Pobranie metadanych utworu oraz linku do 30-sekundowej probki (preview)
 GET https://api.deezer.com/track/{trackId}?ts={timestamp}
 \end{lstlisting}
 
-\hspace{0.60cm}W celu ominięcia problemów z nieaktualną pamięcią podręczną (cache) po stronie serwera lub sieci, do zapytania o szczegóły konkretnego utworu dołączany jest dynamiczny parametr znacznika czasu (\texttt{ts=System.currentTimeMillis()})[cite: 8]. Z odpowiedzi JSON dla obiektu \texttt{track} aplikacja wyodrębnia następujące pola[cite: 8]:
+\hspace{0.60cm}Przedstawione na Listingu~\ref{lst:deezer_endpoints} zapytania HTTP realizują pełny cykl pobierania danych muzycznych w aplikacji. Pierwszy endpoint odpowiada za wyszukiwanie list odtwarzania na podstawie frazy wpisanej przez gracza w menu głównym, drugi zwraca maksymalnie pięć dynamicznych podpowiedzi utworów w trakcie wpisywania odpowiedzi, trzeci pobiera pełną pulę identyfikatorów piosenek z wybranej playlisty, natomiast czwarty zwraca szczegółowe metadane oraz adres strumienia MP3 dla wylosowanego utworu.
+
+\hspace{0.60cm}W celu ominięcia problemów z nieaktualną pamięcią podręczną (cache) po stronie serwera lub sieci, do zapytania o szczegóły konkretnego utworu dołączany jest dynamiczny parametr znacznika czasu (\texttt{ts=System.currentTimeMillis()}). Z odpowiedzi JSON dla obiektu \texttt{track} aplikacja wyodrębnia następujące pola:
 \begin{itemize}
-    \item \textbf{\texttt{title} oraz \texttt{artist.name}:} Tytuł utworu oraz nazwa wykonawcy, służące do weryfikacji odpowiedzi gracza oraz prezentacji wyników po zakończeniu rundy[cite: 8, 9].
-    \item \textbf{\texttt{preview}:} Bezpośredni adres URL do pliku MP3 zawierającego 30-sekundowy fragment utworu[cite: 4, 8].
-    \item \textbf{\texttt{album.cover\_medium}:} Adres URL okładki albumu o średniej rozdzielczości, przekazywany do komponentu \texttt{AsyncImage}[cite: 8, 9].
+    \item \textbf{\texttt{title} oraz \texttt{artist.name}:} Tytuł utworu oraz nazwa wykonawcy, służące do weryfikacji odpowiedzi gracza oraz prezentacji wyników po zakończeniu rundy.
+    \item \textbf{\texttt{preview}:} Bezpośredni adres URL do pliku MP3 zawierającego 30-sekundowy fragment utworu.
+    \item \textbf{\texttt{album.cover\_medium}:} Adres URL okładki albumu o średniej rozdzielczości, przekazywany do komponentu \texttt{AsyncImage}.
 \end{itemize}
 
 \subsection{Opis kluczowych algorytmów aplikacji}
@@ -57,6 +52,7 @@ GET https://api.deezer.com/track/{trackId}?ts={timestamp}
 \hspace{0.60cm}Działanie rozgrywki opiera się na kilku dedykowanych algorytmach zaimplementowanych w warstwie logiki biznesowej:
 
 \begin{enumerate}
-    \item \textbf{Algorytm losowania utworów i walidacji dostępności audio:} Po pobraniu listy identyfikatorów z wybranej playlisty, system losuje utwór za pomocą metody \texttt{playlistTrackIds.random()}[cite: 10]. Ze względu na ograniczenia licencyjne Deezer API, część utworów zwraca pusty ciąg znaków w polu \texttt{preview}[cite: 8]. W takiej sytuacji algorytm automatycznie usuwa nieaktywny identyfikator z bieżącej puli sesji (\texttt{mutableIds.remove(currentTrackId)}) i rekurencyjnie ponawia losowanie kolejnego utworu, gwarantując płynność rozgrywki bez zawieszania ekranu[cite: 10].
+    \item \textbf{Algorytm losowania utworów i walidacji dostępności audio:} Po pobraniu listy identyfikatorów z wybranej playlisty, system losuje utwór za pomocą metody \texttt{playlistTrackIds.random()}. Ze względu na ograniczenia licencyjne Deezer API, część utworów zwraca pusty ciąg znaków w polu \texttt{preview}. W takiej sytuacji algorytm automatycznie usuwa nieaktywny identyfikator z bieżącej puli sesji (\texttt{mutableIds.remove(currentTrackId)}) i rekurencyjnie ponawia losowanie kolejnego utworu, gwarantując płynność rozgrywki bez zawieszania ekranu.
     
-    \item \textbf{Algorytm progresywnego wydłużania czasu odsłuchu:} Każda runda składa
+    \item \textbf{Algorytm progresywnego wydłużania czasu odsłuchu:} Każda runda składa się z maksymalnie sześciu prób, którym przypisano rosnące przedziały czasowe odtwarzania próbki ($0,2\text{ s}$, $1\text{ s}$, $3\text{ s}$, $6\text{ s}$ oraz $15\text{ s}$). Każde błędne wpisanie tytułu lub użycie przycisku pominięcia przesuwa wskaźnik na kolejny próg czasowy, ułatwiając graczowi identyfikację utworu.
+\end{enumerate}

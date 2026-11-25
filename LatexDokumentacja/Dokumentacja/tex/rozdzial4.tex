@@ -1,31 +1,31 @@
 \section{Implementacja}		%4
 
-\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat”[cite: 5]. Omówiono w nim strukturę pakietu \texttt{com.example.guessthebeat}, zastosowane dziedziczenie, autentyczne fragmenty kodu źródłowego wszystkich kluczowych klas i widoków oraz przebieg zmian wdrożonych w trakcie prac projektowych[cite: 5, 7, 8, 9, 10, 11, 12].
+\hspace{0.60cm}Niniejszy rozdział przedstawia szczegóły implementacyjne aplikacji mobilnej „Guess the Beat”. Omówiono w nim strukturę pakietu \texttt{com.example.guessthebeat}, zastosowane dziedziczenie, autentyczne fragmenty kodu źródłowego wszystkich kluczowych klas i widoków oraz przebieg zmian wdrożonych w trakcie prac projektowych.
 
 \subsection{Struktura plików źródłowych i ich odpowiedzialność}
 
-\hspace{0.60cm}Kod źródłowy projektu został podzielony na wyspecjalizowane pliki zgodne z architekturą MVVM (Model-View-ViewModel)[cite: 5]:
+\hspace{0.60cm}Kod źródłowy projektu został podzielony na wyspecjalizowane pliki zgodne z architekturą MVVM (Model-View-ViewModel):
 \begin{itemize}
-    \item \textbf{\texttt{MainActivity.kt}} – punkt wejścia aplikacji[cite: 5, 11]. Inicjalizuje instancję klasy \texttt{MusicPlayer}, konfiguruje motyw graficzny (\texttt{GuessTheBeatTheme}) z tłem gradientowym oraz zarządza cyklem życia odtwarzacza w metodzie \texttt{onPause()}[cite: 11].
-    \item \textbf{\texttt{GameViewModel.kt}} – główny kontroler stanu aplikacji[cite: 5, 10]. Przechowuje aktualny wynik, numer rundy, listę predefiniowanych playlist, historię błędnych odpowiedzi oraz zarządza komunikacją między interfejsem a warstwą sieciową[cite: 10].
-    \item \textbf{\texttt{DeezerAPI.kt}} – warstwa sieciowa i multimedialna[cite: 5, 8]. Zawiera model danych \texttt{SongSuggestion} oraz klasę \texttt{MusicPlayer}, odpowiedzialną za zapytania HTTP do API Deezer i sterowanie obiektem \texttt{MediaPlayer}[cite: 8].
-    \item \textbf{\texttt{MainMenuScreen.kt}} – deklaratywny widok menu głównego, zawierający wyszukiwarkę playlist w bazie Deezer oraz listę polecanych kategorii muzycznych[cite: 5, 12].
-    \item \textbf{\texttt{GameScreen.kt}} – deklaratywny widok rozgrywki, obsługujący trzy stany ekranu: oczekiwanie na start, właściwą rozgrywkę z paskiem postępu i listą podpowiedzi oraz kartę podsumowania końcowego[cite: 5, 9].
-    \item \textbf{\texttt{FlipDetector.kt}} – moduł sprzętowy implementujący interfejs \texttt{SensorEventListener}, odpowiedzialny za detekcję obrotu smartfona ekranem do dołu za pomocą akcelerometru[cite: 7].
+    \item \textbf{\texttt{MainActivity.kt}} – punkt wejścia aplikacji. Inicjalizuje instancję klasy \texttt{MusicPlayer}, konfiguruje motyw graficzny (\texttt{GuessTheBeatTheme}) z tłem gradientowym oraz zarządza cyklem życia odtwarzacza w metodzie \texttt{onPause()}.
+    \item \textbf{\texttt{GameViewModel.kt}} – główny kontroler stanu aplikacji. Przechowuje aktualny wynik, numer rundy, listę predefiniowanych playlist, historię błędnych odpowiedzi oraz zarządza komunikacją między interfejsem a warstwą sieciową.
+    \item \textbf{\texttt{DeezerAPI.kt}} – warstwa sieciowa i multimedialna. Zawiera model danych \texttt{SongSuggestion} oraz klasę \texttt{MusicPlayer}, odpowiedzialną za zapytania HTTP do API Deezer i sterowanie obiektem \texttt{MediaPlayer}.
+    \item \textbf{\texttt{MainMenuScreen.kt}} – deklaratywny widok menu głównego, zawierający wyszukiwarkę playlist w bazie Deezer oraz listę polecanych kategorii muzycznych.
+    \item \textbf{\texttt{GameScreen.kt}} – deklaratywny widok rozgrywki, obsługujący trzy stany ekranu: oczekiwanie na start, właściwą rozgrywkę z paskiem postępu i listą podpowiedzi oraz kartę podsumowania końcowego.
+    \item \textbf{\texttt{FlipDetector.kt}} – moduł sprzętowy implementujący interfejs \texttt{SensorEventListener}, odpowiedzialny za detekcję obrotu smartfona ekranem do dołu za pomocą akcelerometru.
 \end{itemize}
 
 \subsection{Dziedziczenie i reaktywne zarządzanie stanem}
 
 \hspace{0.60cm}Architektura systemu opiera się na mechanizmach dziedziczenia dostarczanych przez platformę Android:
 \begin{itemize}
-    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{ComponentActivity}, co umożliwia osadzenie drzewa widoków Jetpack Compose za pomocą funkcji \texttt{setContent}[cite: 5, 11].
-    \item Klasa \texttt{GameViewModel} dziedziczy po \texttt{androidx.lifecycle.ViewModel}[cite: 5, 10]. Wykorzystuje delegaty \texttt{mutableStateOf} oraz \texttt{mutableStateListOf}, dzięki czemu każda zmiana wartości zmiennej (np. dodanie błędnego strzału czy zmiana treści komunikatu) automatycznie wyzwala rekompozycję odpowiednich elementów interfejsu[cite: 5, 10].
-    \item Klasa \texttt{FlipDetector} implementuje interfejs \texttt{SensorEventListener}, umożliwiając nasłuchiwanie zdarzeń sprzętowych czujnika ruchu[cite: 7].
+    \item Klasa \texttt{MainActivity} dziedziczy po \texttt{ComponentActivity}, co umożliwia osadzenie drzewa widoków Jetpack Compose za pomocą funkcji \texttt{setContent}.
+    \item Klasa \texttt{GameViewModel} dziedziczy po \texttt{androidx.lifecycle.ViewModel}. Wykorzystuje delegaty \texttt{mutableStateOf} oraz \texttt{mutableStateListOf}, dzięki czemu każda zmiana wartości zmiennej (np. dodanie błędnego strzału czy zmiana treści komunikatu) automatycznie wyzwala rekompozycję odpowiednich elementów interfejsu.
+    \item Klasa \texttt{FlipDetector} implementuje interfejs \texttt{SensorEventListener}, umożliwiając nasłuchiwanie zdarzeń sprzętowych czujnika ruchu.
 \end{itemize}
 
 \subsection{Główna aktywność i nawigacja reaktywna (MainActivity.kt)}
 
-\hspace{0.60cm}W pliku \texttt{MainActivity.kt} zaimplementowano główny kontener widoku (\texttt{MainContainer})[cite: 11]. Zamiast tradycyjnego przełączania wielu aktywności za pomocą obiektów \texttt{Intent}, aplikacja dynamicznie podmienia funkcje kompozywalne na podstawie wartości zmiennej \texttt{viewModel.selectedPlaylist}[cite: 11]. Dodatkowo funkcja \texttt{isSystemInDarkTheme()} automatycznie dobiera kolorystykę gradientu tła do ustawień systemowych urządzenia[cite: 11].
+\hspace{0.60cm}W pliku \texttt{MainActivity.kt} zaimplementowano główny kontener widoku (\texttt{MainContainer}). Zamiast tradycyjnego przełączania wielu aktywności za pomocą obiektów \texttt{Intent}, aplikacja dynamicznie podmienia funkcje kompozywalne na podstawie wartości zmiennej \texttt{viewModel.selectedPlaylist}. Dodatkowo funkcja \texttt{isSystemInDarkTheme()} automatycznie dobiera kolorystykę gradientu tła do ustawień systemowych urządzenia.
 
 \begin{lstlisting}[language=Kotlin, caption={Implementacja klasy MainActivity oraz głównego kontenera nawigacji w pliku MainActivity.kt}, label={lst:main_activity}]
 class MainActivity : ComponentActivity() {
@@ -99,9 +99,11 @@ fun MainContainer(
 }
 \end{lstlisting}
 
+\hspace{0.60cm}Powyższy kod (Listing~\ref{lst:main_activity}) inicjalizuje jedną wspólną instancję klasy \texttt{MusicPlayer} oraz osadza drzewo widoków Jetpack Compose w metodzie \texttt{onCreate()}. Nadpisanie metody cyklu życia \texttt{onPause()} gwarantuje natychmiastowe zatrzymanie odtwarzania muzyki po zminimalizowaniu aplikacji lub odebraniu połączenia telefonicznego. Z kolei funkcja \texttt{MainContainer} odpowiada za renderowanie nagłówka z logo oraz automatyczne przełączanie widoku między menu głównym a ekranem gry w zależności od tego, czy użytkownik wybrał już listę odtwarzania (\texttt{viewModel.selectedPlaylist}).
+
 \subsection{Implementacja menu głównego i wyszukiwarki (MainMenuScreen.kt)}
 
-\hspace{0.60cm}Ekran startowy aplikacji (\texttt{MainMenuScreen}) umożliwia użytkownikowi wybór jednej z predefiniowanych list odtwarzania lub przeszukanie pełnej bazy serwisu Deezer[cite: 12]. W trakcie wykonywania zapytania sieciowego przycisk wyszukiwania jest blokowany (\texttt{enabled = !viewModel.isSearching}), a wewnątrz niego wyświetlany jest wskaźnik ładowania \texttt{CircularProgressIndicator}[cite: 12].
+\hspace{0.60cm}Ekran startowy aplikacji (\texttt{MainMenuScreen}) umożliwia użytkownikowi wybór jednej z predefiniowanych list odtwarzania lub przeszukanie pełnej bazy serwisu Deezer. W trakcie wykonywania zapytania sieciowego przycisk wyszukiwania jest blokowany (\texttt{enabled = !viewModel.isSearching}), a wewnątrz niego wyświetlany jest wskaźnik ładowania \texttt{CircularProgressIndicator}.
 
 \begin{lstlisting}[language=Kotlin, caption={Implementacja wyszukiwarki i listy playlist w pliku MainMenuScreen.kt}, label={lst:main_menu_screen}]
 @Composable
@@ -174,9 +176,11 @@ fun MainMenuScreen(
 }
 \end{lstlisting}
 
+\hspace{0.60cm}Implementacja przedstawiona na Listingu~\ref{lst:main_menu_screen} wykorzystuje pole tekstowe \texttt{OutlinedTextField} z dynamiczną ikoną czyszczenia wpisanej frazy (\texttt{trailingIcon}), która pojawia się wyłącznie wtedy, gdy pole nie jest puste. Poniżej komponentu wyszukiwarki system sprawdza zawartość listy \texttt{searchResults} – jeżeli użytkownik nie wykonał jeszcze własnego zapytania, wyświetlane są domyślne kategorie zdefiniowane w \texttt{availablePlaylists}, a kliknięcie dowolnej karty (\texttt{Card}) natychmiast inicjuje rozgrywkę dla wybranej listy.
+
 \subsection{Implementacja warstwy sieciowej i audio (DeezerAPI.kt)}
 
-\hspace{0.60cm}Poniższy listing przedstawia implementację klasy \texttt{MusicPlayer}, w szczególności asynchroniczne ładowanie i odtwarzanie próbki utworu z wykorzystaniem \texttt{prepareAsync()} oraz obsługę limitu czasu odtwarzania za pomocą obiektu \texttt{Handler}[cite: 8]:
+\hspace{0.60cm}Poniższy listing przedstawia implementację klasy \texttt{MusicPlayer}, w szczególności asynchroniczne ładowanie i odtwarzanie próbki utworu z wykorzystaniem \texttt{prepareAsync()} oraz obsługę limitu czasu odtwarzania za pomocą obiektu \texttt{Handler}:
 
 \begin{lstlisting}[language=Kotlin, caption={Implementacja odtwarzania próbek i komunikacji z Deezer API w pliku DeezerAPI.kt}, label={lst:deezer_api_real}]
 data class SongSuggestion(
@@ -247,9 +251,11 @@ class MusicPlayer {
 }
 \end{lstlisting}
 
+\hspace{0.60cm}Metoda \texttt{loadAndPlaySong} zaprezentowana na Listingu~\ref{lst:deezer_api_real} wykonuje zapytanie sieciowe w wątku roboczym \texttt{Dispatchers.IO}, co chroni główny wątek aplikacji przed zawieszeniem. Po wyodrębnieniu adresu pliku MP3 z obiektu JSON odtwarzacz jest buforowany asynchronicznie (\texttt{prepareAsync()}), a w momencie rozpoczęcia dźwięku obiekt \texttt{Handler} planuje opóźnione wywołanie funkcji pauzującej (\texttt{postDelayed}) dokładnie po upływie czasu zadanego dla bieżącego etapu. Metoda \texttt{playSnippet} umożliwia ponowne odsłuchanie tego samego fragmentu od początku bez konieczności ponownego pobierania pliku z sieci.
+
 \subsection{Implementacja logiki rozgrywki (GameViewModel.kt)}
 
-\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano zarówno predefiniowaną listę najpopularniejszych playlist Deezer (\texttt{availablePlaylists}), jak i logikę weryfikacji odpowiedzi gracza (\texttt{checkAnswer}) wraz z dynamicznym wydłużaniem czasu odsłuchu kolejnych prób[cite: 10]:
+\hspace{0.60cm}W klasie \texttt{GameViewModel} zdefiniowano zarówno predefiniowaną listę najpopularniejszych playlist Deezer (\texttt{availablePlaylists}), jak i logikę weryfikacji odpowiedzi gracza (\texttt{checkAnswer}) wraz z dynamicznym wydłużaniem czasu odsłuchu kolejnych prób:
 
 \begin{lstlisting}[language=Kotlin, caption={Kluczowe metody logiki rozgrywki w klasie GameViewModel.kt}, label={lst:game_viewmodel_real}]
 class GameViewModel : ViewModel() {
@@ -303,9 +309,11 @@ class GameViewModel : ViewModel() {
 }
 \end{lstlisting}
 
+\hspace{0.60cm}Kod na Listingu~\ref{lst:game_viewmodel_real} zarządza stanem rozgrywki w sposób reaktywny. Metoda \texttt{checkAnswer} najpierw oczyszcza tekst wpisany przez gracza ze zbędnych spacji (\texttt{trim()}) i ignoruje puste zatwierdzenia. W przypadku poprawnego odgadnięcia tytułu (bez uwzględniania wielkości liter) zwiększa licznik punktów i kończy rundę; w przeciwnym razie odejmuje jedną szansę, zapisuje błędny typ na liście \texttt{incorrectGuesses} i automatycznie uruchamia dłuższy fragment utworu z tablicy \texttt{attemptDurations}.
+
 \subsection{Implementacja interfejsu rozgrywki (GameScreen.kt)}
 
-\hspace{0.60cm}Ekran rozgrywki w pliku \texttt{GameScreen.kt} dynamicznie dostosowuje wyświetlane komponenty do aktualnego etapu rundy[cite: 9]. Istotnym elementem implementacji jest ograniczenie maksymalnej wysokości karty z podpowiedziami wyszukiwarki za pomocą modyfikatora \texttt{.heightIn(max = 180.dp)} połączonego z pionowym przewijaniem (\texttt{verticalScroll}), co zapobiega rozpychaniu ekranu po wysunięciu klawiatury systemowej[cite: 9].
+\hspace{0.60cm}Ekran rozgrywki w pliku \texttt{GameScreen.kt} dynamicznie dostosowuje wyświetlane komponenty do aktualnego etapu rundy. Istotnym elementem implementacji jest ograniczenie maksymalnej wysokości karty z podpowiedziami wyszukiwarki za pomocą modyfikatora \texttt{.heightIn(max = 180.dp)} połączonego z pionowym przewijaniem (\texttt{verticalScroll}), co zapobiega rozpychaniu ekranu po wysunięciu klawiatury systemowej.
 
 \begin{lstlisting}[language=Kotlin, caption={Fragment implementacji listy podpowiedzi oraz paska postępu w pliku GameScreen.kt}, label={lst:game_screen_real}]
 // Pasek postepu dlugosci odsluchiwanej probki
@@ -351,12 +359,14 @@ if (viewModel.showSuggestions && viewModel.songSuggestions.isNotEmpty()) {
 }
 \end{lstlisting}
 
+\hspace{0.60cm}Fragment przedstawiony na Listingu~\ref{lst:game_screen_real} wizualizuje postęp zużytych prób za pomocą paska \texttt{LinearProgressIndicator}, którego wypełnienie rośnie proporcjonalnie od $1/6$ do $6/6$ wraz z kolejnymi etapami odsłuchu. Poniżej renderowana jest karta podpowiedzi pobieranych na żywo z API Deezer – zastosowanie przewijanej kolumny o maksymalnej wysokości $180\text{ dp}$ sprawia, że lista sugestii pozostaje czytelna i dostępna do kliknięcia nawet przy otwartej klawiaturze ekranowej smartfona.
+
 \subsection{Przebieg zmian i rozwoju aplikacji w ostatnich tygodniach}
 
-\hspace{0.60cm}W trakcie prac nad projektem architektura aplikacji przeszła szereg iteracyjnych ulepszeń[cite: 5, 7]:
+\hspace{0.60cm}W trakcie prac nad projektem architektura aplikacji przeszła szereg iteracyjnych ulepszeń:
 \begin{enumerate}
-    \item \textbf{Optymalizacja zapytań sieciowych i obsługi błędów:} Przeniesiono komunikację z API Deezer do wątków \texttt{Dispatchers.IO} oraz dodano mechanizm bezpiecznego powrotu do menu głównego (\texttt{handleNetworkError}) w przypadku utraty połączenia z internetem[cite: 8, 10].
-    \item \textbf{Wdrożenie mechanizmu etapowego odsłuchu:} Zaimplementowano progresywne wydłużanie próbek audio ($0,2\text{ s} \rightarrow 1\text{ s} \rightarrow 3\text{ s} \rightarrow 6\text{ s} \rightarrow 15\text{ s}$) wraz z dedykowaną funkcją pomijania pojedynczego etapu zamiast odrzucania całego utworu[cite: 7, 10].
-    \item \textbf{Integracja czujnika akcelerometru (\texttt{FlipDetector}):} Dodano obsługę fizycznego lub symulowanego odwrócenia telefonu ekranem do dołu jako alternatywnego sposobu na pominięcie bieżącego etapu zgadywania[cite: 7].
-    \item \textbf{Dopracowanie ergonomii interfejsu (\texttt{GameScreen.kt}):} Ograniczono wysokość listy podpowiedzi, wyrównano wysokość pola tekstowego wyszukiwarki względem przycisku pomijania etapu oraz zaimplementowano dolny pasek nawigacyjny z opcją powrotu do menu i panelu logowania[cite: 7, 9].
+    \item \textbf{Optymalizacja zapytań sieciowych i obsługi błędów:} Przeniesiono komunikację z API Deezer do wątków \texttt{Dispatchers.IO} oraz dodano mechanizm bezpiecznego powrotu do menu głównego (\texttt{handleNetworkError}) w przypadku utraty połączenia z internetem.
+    \item \textbf{Wdrożenie mechanizmu etapowego odsłuchu:} Zaimplementowano progresywne wydłużanie próbek audio ($0,2\text{ s} \rightarrow 1\text{ s} \rightarrow 3\text{ s} \rightarrow 6\text{ s} \rightarrow 15\text{ s}$) wraz z dedykowaną funkcją pomijania pojedynczego etapu zamiast odrzucania całego utworu.
+    \item \textbf{Integracja czujnika akcelerometru (\texttt{FlipDetector}):} Dodano obsługę fizycznego lub symulowanego odwrócenia telefonu ekranem do dołu jako alternatywnego sposobu na pominięcie bieżącego etapu zgadywania.
+    \item \textbf{Dopracowanie ergonomii interfejsu (\texttt{GameScreen.kt}):} Ograniczono wysokość listy podpowiedzi, wyrównano wysokość pola tekstowego wyszukiwarki względem przycisku pomijania etapu oraz zaimplementowano dolny pasek nawigacyjny z opcją powrotu do menu i panelu logowania.
 \end{enumerate}
